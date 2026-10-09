@@ -115,10 +115,11 @@ async function postClick(req, env) {
 }
 
 /* ---- flights: cached real prices from the Travelpayouts Data API ---- */
-export function mapFlights(data) {
+export function mapFlights(data, marker = '') {
+  const link = (l) => { if (!l) return ''; const u = 'https://www.aviasales.com' + l; return !marker || /[?&]marker=/.test(u) ? u : u + (u.includes('?') ? '&' : '?') + 'marker=' + encodeURIComponent(marker); };
   return (Array.isArray(data) ? data : []).filter((f) => f && f.departure_at && f.price > 0).map((f) => ({
     price: Math.round(f.price), airline: str(f.airline, 4), number: str(f.flight_number, 8), dep: String(f.departure_at).slice(11, 16), date: String(f.departure_at).slice(0, 10),
-    transfers: +f.transfers || 0, dur: +f.duration_to || +f.duration || 0, link: f.link ? 'https://www.aviasales.com' + f.link : '' }));
+    transfers: +f.transfers || 0, dur: +f.duration_to || +f.duration || 0, link: link(f.link) }));
 }
 async function getFlights(req, env, url) {
   const dest = str(url.searchParams.get('dest'), 3).toUpperCase(), date = str(url.searchParams.get('date'), 10), ret = str(url.searchParams.get('ret'), 10), direct = url.searchParams.get('direct') === '1';
@@ -132,7 +133,7 @@ async function getFlights(req, env, url) {
     const r = await fetch('https://api.travelpayouts.com/aviasales/v3/prices_for_dates?' + q, { headers: { 'accept-encoding': 'gzip, deflate' } });
     const j = await r.json();
     if (!r.ok || !j.success) return json({ available: false, reason: 'provider' });
-    const out = { available: true, checkedAt: Date.now(), flights: mapFlights(j.data) };
+    const out = { available: true, checkedAt: Date.now(), flights: mapFlights(j.data, env.TP_MARKER) };
     await cachePut(env, k, out, 6 * 3600e3);
     return json(out);
   } catch { return json({ available: false, reason: 'provider' }); }

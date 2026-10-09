@@ -6,5 +6,5 @@
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
   "d1_databases": [{ "binding": "DB", "database_name": "haniago", "database_id": "REPLACED_BY_DEPLOY", "migrations_dir": "migrations" }],
   "ai": { "binding": "AI" },
-  "vars": { "GOOGLE_MONTHLY_CAP": "4500", "AI_DAILY_CAP": "300", "OFFERS_URL": "https://save.hania360.com/api/offers" }
+  "vars": { "TP_MARKER": "583460", "GOOGLE_MONTHLY_CAP": "4500", "AI_DAILY_CAP": "300", "OFFERS_URL": "https://save.hania360.com/api/offers" }
 }
