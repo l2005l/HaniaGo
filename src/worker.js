@@ -117,15 +117,17 @@ async function postClick(req, env) {
 /* ---- flights: cached real prices from the Travelpayouts Data API ---- */
 export function mapFlights(data, marker = '') {
   const link = (l) => { if (!l) return ''; const u = 'https://www.aviasales.com' + l; return !marker || /[?&]marker=/.test(u) ? u : u + (u.includes('?') ? '&' : '?') + 'marker=' + encodeURIComponent(marker); };
-  return (Array.isArray(data) ? data : []).filter((f) => f && f.departure_at && f.price > 0).map((f) => ({
+  const seen = new Set();
+  return (Array.isArray(data) ? data : []).filter((f) => f && f.departure_at && f.price > 0).sort((a, b) => a.price - b.price).map((f) => ({
     price: Math.round(f.price), airline: str(f.airline, 4), number: str(f.flight_number, 8), dep: String(f.departure_at).slice(11, 16), date: String(f.departure_at).slice(0, 10),
-    transfers: +f.transfers || 0, dur: +f.duration_to || +f.duration || 0, link: link(f.link) }));
+    transfers: +f.transfers || 0, dur: +f.duration_to || +f.duration || 0, link: link(f.link) }))
+    .filter((f) => { const k = f.airline + f.number + f.dep; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 async function getFlights(req, env, url) {
   const dest = str(url.searchParams.get('dest'), 3).toUpperCase(), date = str(url.searchParams.get('date'), 10), ret = str(url.searchParams.get('ret'), 10), direct = url.searchParams.get('direct') === '1';
   if (!/^[A-Z]{3}$/.test(dest) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('params');
   if (!env.TRAVELPAYOUTS_TOKEN) return json({ available: false, reason: 'no_key' });
-  const k = 'fl:' + dest + ':' + date + ':' + ret + ':' + (direct ? 1 : 0);
+  const k = 'fl2:' + dest + ':' + date + ':' + ret + ':' + (direct ? 1 : 0);
   const hit = await cacheGet(env, k); if (hit) return json(hit);
   const q = new URLSearchParams({ origin: 'TLV', destination: dest, departure_at: date, currency: 'ils', sorting: 'price', direct: String(direct), limit: '20', one_way: ret ? 'false' : 'true', token: env.TRAVELPAYOUTS_TOKEN });
   if (/^\d{4}-\d{2}-\d{2}$/.test(ret)) q.set('return_at', ret);

@@ -113,6 +113,12 @@ test('flight rows are mapped and bad rows dropped', () => {
   assert.equal(mapFlights([{ price: 1, departure_at: '2026-11-15T06:10', link: '/s?marker=9' }], '583460')[0].link, 'https://www.aviasales.com/s?marker=9');
 });
 
+test('the same outbound flight is listed once, at its cheapest price', () => {
+  const row = (price) => ({ price, airline: 'W4', flight_number: 6044, departure_at: '2026-11-15T19:35:00+02:00' });
+  const f = mapFlights([row(552), row(371), row(622), { ...row(900), flight_number: 1 }]);
+  assert.deepEqual(f.map((x) => x.price), [371, 900]);
+});
+
 test('offers match attractions by name in either direction', () => {
   const m = matchOffers([{ storeName: 'המצפה התת ימי', label: '10% הנחה', cardName: 'חבר', actionUrl: 'https://x.test/a' }, { storeName: 'ACE', label: 'z' }], ['המצפה התת ימי אילת', 'טיילת וחוף']);
   assert.deepEqual(Object.keys(m), ['המצפה התת ימי אילת']); assert.equal(m['המצפה התת ימי אילת'][0].url, 'https://x.test/a');
