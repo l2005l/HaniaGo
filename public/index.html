@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0B7A8C">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HaniaGo">
 <meta name="description" content="HaniaGo: תכנון וליווי של טיול משפחתי, מהדלת בבית ועד החזרה.">
 <style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 <title>HaniaGo</title>
@@ -85,7 +91,9 @@ nav button.on{background:var(--sea-soft);color:var(--ink)}
 </head>
 <body>
 <div class="wrap" dir="rtl" lang="he">
-  <div class="top"><h1 class="logo">Hania<span>Go</span></h1><p class="note">מהדלת בבית ועד החזרה</p></div>
+  <div class="top"><h1 class="logo">Hania<span>Go</span></h1><button id="inst" hidden>התקנת האפליקציה</button></div>
+  <p class="note">מהדלת בבית ועד החזרה</p>
+  <p id="instHelp" class="demo" hidden>באייפון: פתחו את האתר ב-Safari, לחצו על כפתור השיתוף ובחרו "הוסף למסך הבית".</p>
   <p class="demo">אב-טיפוס: מחירים, זמני נסיעה וטיפים שמסומנים "דוגמה" אינם אמיתיים. קישורי ההזמנה וטיפים מהקהילה אמיתיים.</p>
   <div id="pass"></div>
   <main id="main" class="sec"></main>
@@ -483,7 +491,7 @@ async function mkDest(){if(S.busy)return;var q=(S.newDest||'').trim().slice(0,60
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 5 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':'לא הצלחתי לבנות את היעד הזה. בדקו את השם ונסו שוב.'}
  S.busy=false;render(1)}
 function queueDb(){clearTimeout(dbT);dbT=setTimeout(async function(){var c=JSON.parse(JSON.stringify(S));c.fam.forEach(function(m){m.n=''});c.ticketNo='';c.ticketCode='';c.famName='';c.admKey='';var j=JSON.stringify(c);if(j===dbLast||dbBusy)return;dbBusy=true;try{await api('PUT','/api/trip',j);dbLast=j}catch(e){}dbBusy=false},1500)}
-function loadAdmin(){if(!ADMIN)return;api('GET','/api/admin/queue').then(function(j){ADM=j;soft()}).catch(function(e){if(e&&e.status===403){ADMIN='';ADM=null;try{localStorage.removeItem('haniago_admin')}catch(x){}S.fbOk=false;S.fbMsg='מפתח העורך שגוי.';render(1)}})}
+function loadAdmin(){if(!ADMIN)return;api('GET','/api/admin/queue').then(function(j){ADM=j;soft()}).catch(function(e){if(e&&(e.status===403||e.status===429)){ADMIN='';ADM=null;try{localStorage.removeItem('haniago_admin')}catch(x){}S.fbOk=false;S.fbMsg=e.status===429?'יותר מדי ניסיונות שגויים. כניסת העורך נעולה עד מחר.':'סיסמת העורך שגויה.';render(1)}})}
 function loadFlights(){var d=D();if(!d.abroad||!d.code)return;var k=d.code+'|'+S.date+'|'+nights()+'|'+(S.direct?1:0);if(FL.k===k)return;FL={k:k,st:'load',list:[]};
  api('GET','/api/flights?dest='+d.code+'&date='+S.date+'&ret='+addDays(S.date,nights())+'&direct='+(S.direct?1:0)).then(function(j){if(FL.k!==k)return;FL.st=j.available?'ok':'off';FL.list=j.flights||[];FL.at=j.checkedAt;soft()}).catch(function(){if(FL.k===k){FL.st='off';soft()}})}
 function flSorted(){var l=FL.list.slice();l.sort(function(a,b){return S.sort==='fast'?(a.dur||9e9)-(b.dur||9e9):S.sort==='early'?mins(a.dep)-mins(b.dep):a.price-b.price});return l}
@@ -530,7 +538,7 @@ function vCommunity(){var d=D(),h='<h2>קהילה וטיפים</h2>';
   h+='<div class="card"><h3>תור אישור לעורך</h3><p class="note">מגיעים לכאן רק נושאים שמשפחה אחת דיווחה עליהם.</p>'+(ADM.queue.length?ADM.queue.map(function(o){return '<div class="stop"><div class="sp"><b>'+esc(o.place)+', '+esc(o.dest)+'</b><span class="tag">'+(o.kind==='warn'?'אזהרה':'טיפ')+' · '+esc(o.topic)+'</span></div><p>'+esc(o.text)+'</p><p class="note">'+esc(o.src==='creator'?(o.srcName||'יוצר תוכן'):'משפחה')+'</p><div class="row"><button class="pri grow" data-act="apprg" data-ids="'+esc(o.ids.join(','))+'" data-v="yes">אישור</button><button class="grow" data-act="apprg" data-ids="'+esc(o.ids.join(','))+'" data-v="no">דחייה</button></div></div>'}).join(''):'<p class="note">אין נושאים שממתינים.</p>')+'</div>';
   h+='<div class="card"><h3>שימוש ולחיצות</h3>'+[['booking','Booking'],['gyg','GetYourGuide'],['sky','Skyscanner'],['avia','Aviasales']].map(function(x){return '<div class="sp"><span>לחיצות '+x[1]+'</span><span class="num">'+(by[x[0]]||0)+'</span></div>'}).join('')
    +'<div class="sp"><span>חישובי מסלול החודש</span><span class="num">'+ADM.usage.google+' מתוך '+ADM.usage.googleCap+'</span></div><div class="sp"><span>קריאות בינה מלאכותית היום</span><span class="num">'+ADM.usage.ai+'</span></div></div>'}
- else h+='<div class="card"><h3>כניסת עורך</h3><label for="adk">מפתח עורך<input id="adk" type="password" data-live="admKey" autocomplete="off"></label><button data-act="admin">כניסה</button></div>';
+ else h+='<div class="card"><h3>כניסת עורך</h3><label for="adk">סיסמת עורך<input id="adk" type="password" data-live="admKey" autocomplete="off"></label><button data-act="admin">כניסה</button></div>';
  return h}
 var TABS=[['family','משפחה',vFamily],['flight','טיסה',vFlight],['leave','יציאה',vLeave],['plan','מסלול',vPlan],['money','תקציב',vMoney],['share','שיתוף',vShare],['community','קהילה',vCommunity]];
 function render(keep){D();loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0];
@@ -566,6 +574,13 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='rtre'){RT.k='';render(1)}});
 (async function(){try{var j=await api('GET','/api/trip');if(j&&j.state){var o=JSON.parse(j.state),tab=S.tab,lfn=S.famName,lf=S.fam,tn=S.ticketNo,tc=S.ticketCode;for(var k in o)S[k]=o[k];S.tab=tab;S.famName=lfn;S.ticketNo=tn;S.ticketCode=tc;S.fam.forEach(function(m,i){if(lf[i]&&lf[i].n)m.n=lf[i].n});S.busy=false;S.fbMsg='';for(var ck in S.custom||{})DEST[ck]=S.custom[ck];dbLast=j.state}}catch(e){}
  if(ADMIN)loadAdmin();render(1)})();
+(function(){var b=document.getElementById('inst'),help=document.getElementById('instHelp'),ev=null;if(!b)return;
+ var standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;if(standalone)return;
+ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});
+ window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;b.hidden=false});
+ window.addEventListener('appinstalled',function(){b.hidden=true;help.hidden=true});
+ if(/iphone|ipad|ipod/i.test(navigator.userAgent))b.hidden=false;
+ b.addEventListener('click',function(){if(ev){ev.prompt();ev=null;b.hidden=true}else help.hidden=!help.hidden})})();
 var h=(location.hash||'').slice(1);if(TABS.some(function(x){return x[0]===h}))S.tab=h;
 render();
 </script>

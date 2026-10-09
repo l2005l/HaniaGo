@@ -8,7 +8,15 @@ const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra } });
 const bad = (msg, status = 400) => json({ error: msg }, status);
 const deviceOf = (req) => { const d = req.headers.get('x-device') || ''; return /^[a-f0-9-]{36}$/.test(d) ? d : null; };
-const isAdmin = (req, env) => !!env.ADMIN_KEY && req.headers.get('x-admin') === env.ADMIN_KEY;
+// Wrong guesses are counted per day; past the limit the editor area locks until tomorrow.
+async function adminGate(req, env) {
+  const given = req.headers.get('x-admin');
+  if (!env.ADMIN_KEY || !given) return bad('forbidden', 403);
+  const k = 'adminfail:' + new Date().toISOString().slice(0, 10);
+  if (await count(env, k) >= 20) return json({ error: 'locked' }, 429);
+  if (given !== env.ADMIN_KEY) { await bump(env, k); return bad('forbidden', 403); }
+  return null;
+}
 const str = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 const num = (v) => (Number.isFinite(+v) ? +v : null);
 
@@ -91,7 +99,7 @@ async function postReport(req, env) {
   return json({ ok: true, kind: r.kind, topic: r.topic, text: r.text });
 }
 async function adminQueue(req, env) {
-  if (!isAdmin(req, env)) return bad('forbidden', 403);
+  const denied = await adminGate(req, env); if (denied) return denied;
   const { results } = await env.DB.prepare("SELECT * FROM reports WHERE status='' ORDER BY ts DESC LIMIT 500").all();
   const g = {};
   for (const r of results) { const k = r.dest + '|' + r.place + '|' + r.kind + '|' + r.topic; const o = g[k] || (g[k] = { r, ids: [], devices: new Set() }); o.ids.push(r.id); o.devices.add(r.device); }
@@ -101,7 +109,7 @@ async function adminQueue(req, env) {
   return json({ queue, clicks, usage: { google: await count(env, 'google:' + month), googleCap: +(env.GOOGLE_MONTHLY_CAP || 4500), ai: await count(env, 'ai:' + today()) } });
 }
 async function adminApprove(req, env) {
-  if (!isAdmin(req, env)) return bad('forbidden', 403);
+  const denied = await adminGate(req, env); if (denied) return denied;
   const b = await req.json().catch(() => null);
   if (!b || !Array.isArray(b.ids) || (b.status !== 'yes' && b.status !== 'no')) return bad('json');
   for (const id of b.ids.slice(0, 50)) await env.DB.prepare('UPDATE reports SET status=? WHERE id=?').bind(b.status, str(id, 120)).run();

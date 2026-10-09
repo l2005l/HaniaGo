@@ -74,6 +74,12 @@ test('the editor queue needs the admin key, and approval publishes a single repo
   assert.equal(g.length, 1); assert.equal(g[0].ok, true);
 });
 
+test('twenty wrong editor passwords lock the editor area for the day, even for the right one', async () => {
+  const env = { DB: fakeD1(), ADMIN_KEY: 'secret' };
+  for (let i = 0; i < 20; i++) assert.equal((await call(env, 'GET', '/api/admin/queue', { admin: 'guess' + i })).status, 403);
+  assert.equal((await call(env, 'GET', '/api/admin/queue', { admin: 'secret' })).status, 429);
+});
+
 test('rejected and year-old reports are dropped', () => {
   const now = Date.now(), row = (o) => ({ place: 'p', kind: 'tip', topic: 't', device: 'a', status: '', ts: now, text: 'x', ...o });
   assert.equal(groupReports([row({ status: 'no' })], 'a', now).length, 0);
