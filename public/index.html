@@ -505,7 +505,7 @@ function vFlight(){var d=D();if(!d.abroad)return vFlight0();var p=pax();loadFlig
   flSorted().slice(0,8).forEach(function(f,i){var on=S.fDep===f.dep&&+S.fPrice===f.price;h+='<div class="stop"><div class="sp"><span class="big">'+esc(f.dep)+'</span><span class="big">'+nis(f.price)+'</span></div><div class="sp"><span>'+esc(f.airline+' '+f.number)+(f.dur?' · '+durTxt(f.dur):'')+' <span class="tag">'+(f.transfers?f.transfers+' עצירות':'ישירה')+'</span></span><button data-act="flpick" data-i="'+i+'" class="'+(on?'on':'')+'">'+(on?'נבחרה':'בחירה')+'</button></div>'+(f.link?'<a class="btn" data-partner="avia" target="_blank" rel="noopener" href="'+esc(f.link)+'">להזמנה ב-Aviasales</a>':'')+'</div>'})}
  else if(FL.st==='ok')h+='<p class="note">לא נמצאו מחירים שמורים לתאריכים האלה. החיפוש המלא ב-Skyscanner.</p>';
  else h+='<p class="note">מחירים בתוך האפליקציה יופיעו אחרי חיבור מקור המחירים בשרת. בינתיים החיפוש ב-Skyscanner.</p>';
- h+=(d.code?pLink('sky',skyUrl(d),'חיפוש חי ב-Skyscanner'):'')+'</div>';
+ h+=(d.code?'<a class="btn pri" data-partner="avia" target="_blank" rel="noopener" href="'+esc(aviaUrl(d))+'">חיפוש חי ב-Aviasales</a><p class="note">קישור שותפים: HaniaGo מקבלת עמלה על הזמנה, והמחיר שלכם לא משתנה.</p><a class="btn" data-partner="sky" target="_blank" rel="noopener" href="'+esc(skyUrl(d))+'">השוואה ב-Skyscanner</a><p class="note">ב-Skyscanner אין כרגע קישור שותפים, ולכן הזמנה דרכו לא מזכה בעמלה.</p>':'')+'</div>';
  h+='<div class="card"><h3>הטיסה שבחרתם</h3><p class="note">בחירה מהרשימה ממלאת את השדות. אפשר גם להזין ידנית אחרי הזמנה. שעת ההמראה קובעת מתי יוצאים מהבית.</p><div class="row"><label class="grow" for="fdep">שעת המראה<input id="fdep" type="time" data-f="fDep" value="'+esc(S.fDep||'')+'"></label><label class="grow" for="fpr">מחיר לנוסע ב-₪<input id="fpr" type="number" min="0" inputmode="numeric" data-f="fPrice" value="'+esc(S.fPrice||'')+'" placeholder="950"></label></div>'
   +'<div class="row"><label class="grow" for="tno">מספר טיסה<input id="tno" data-f="ticketNo" value="'+esc(S.ticketNo)+'" placeholder="LY385"></label><label class="grow" for="tcode">קוד הזמנה<input id="tcode" data-f="ticketCode" value="'+esc(S.ticketCode)+'" placeholder="ABC123"></label></div>'
   +(+S.fPrice>0?'<p>סה״כ למשפחה: <b class="num">'+nis(S.fPrice*(p.a+p.c)+S.fPrice*.1*p.inf)+'</b></p>':'')+'<p class="note">מספר הטיסה וקוד ההזמנה נשמרים רק במכשיר הזה.</p></div>';
@@ -543,20 +543,23 @@ function vCommunity(){var d=D(),h='<h2>קהילה וטיפים</h2>';
  else h+='<div class="card"><h3>כניסת עורך</h3><label for="adk">סיסמת עורך<input id="adk" type="password" data-live="admKey" autocomplete="off"></label><button data-act="admin">כניסה</button></div>';
  return h}
 var POP=[['לונדון','LON'],['פריז','PAR'],['ברצלונה','BCN'],['מדריד','MAD'],['אמסטרדם','AMS'],['ברלין','BER'],['פראג','PRG'],['וינה','VIE'],['מילאנו','MIL'],['ליסבון','LIS'],['לרנקה','LCA'],['פאפוס','PFO'],['רודוס','RHO'],['כרתים','HER'],['סלוניקי','SKG'],['בוקרשט','BUH'],['סופיה','SOF'],['ורנה','VAR'],['ורשה','WAW'],['קרקוב','KRK'],['ציריך','ZRH'],['בטומי','BUS'],['טביליסי','TBS'],['דובאי','DXB'],['אבו דאבי','AUH'],['בנגקוק','BKK'],['ניו יורק','NYC']];
-var PLACES=[],plT=null;
-function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)return;el.innerHTML=PLACES.slice(0,6).map(function(p,i){return '<button data-act="placepick" data-i="'+i+'" style="justify-content:space-between;gap:8px"><span>'+esc(p.name)+'</span><span class="note">'+esc(p.country)+' · '+esc(p.code)+'</span></button>'}).join('')}
+var PLACES=[],plT=null,TPM='583460';
+var ILP=['תל אביב-יפו','חיפה','עכו','נהריה וראש הנקרה','צפת','רמת הגולן','עמק החולה','נצרת','זכרון יעקב וקיסריה','נתניה','ים המלח','מצפה רמון','באר שבע','אשקלון','ערד ומצדה','בית שאן ועמק המעיינות'];
+function aviaUrl(d){var f=function(s){return s.slice(8,10)+s.slice(5,7)},p=pax(),px=String(Math.max(1,p.a))+((p.c||p.inf)?String(p.c):'')+(p.inf?String(p.inf):'');return 'https://www.aviasales.com/search/TLV'+f(S.date)+String(d.code).toUpperCase()+f(addDays(S.date,nights()))+px+'?marker='+TPM}
+function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)return;el.innerHTML=PLACES.slice(0,6).map(function(p,i){return '<button data-act="placepick" data-i="'+i+'" style="justify-content:space-between;gap:8px"><span>'+esc(p.name)+'</span><span class="note">'+(p.code?esc(p.country)+' · '+esc(p.code):'ישראל')+'</span></button>'}).join('')}
 function vFamily(){var ab=S.abroad;
- var card='<div class="card"><h3>'+(ab?'כל יעד בעולם':'יעד אחר בארץ')+'</h3><p class="note">'+(ab?'מקלידים שם של עיר ובוחרים מהרשימה, או לוחצים על יעד פופולרי. ':'מקלידים שם של יעד ולוחצים על בניית יעד. ')+'רשימת האטרקציות נבנית על ידי בינה מלאכותית ומסומנת כלא מאומתת, עד שמצטברים טיפים מהקהילה.</p>'
+ var card='<div class="card"><h3>'+(ab?'כל יעד בעולם':'יעד אחר בארץ')+'</h3><p class="note">'+(ab?'מקלידים שם של עיר ובוחרים מהרשימה, או לוחצים על יעד פופולרי. ':'מקלידים שם של עיר, אזור או אתר בארץ ובוחרים מהרשימה, או לוחצים על בניית יעד לפי השם. ')+'רשימת האטרקציות נבנית על ידי בינה מלאכותית ומסומנת כלא מאומתת, עד שמצטברים טיפים מהקהילה.</p>'
   +'<label for="nd">חיפוש יעד<input id="nd" data-live="newDest" data-sug="1" autocomplete="off" value="'+esc(S.newDest||'')+'" placeholder="'+(ab?'דובאי':'מצפה רמון')+'"></label><div id="sug" class="sec"></div>'
   +(S.busy&&S.building?'<p class="note" role="status">בונה את '+esc(S.building)+'… זה לוקח עד חצי דקה.</p>':'')+(S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')
   +'<button data-act="mkdest">'+(S.busy?'בונה את היעד…':'בניית יעד לפי השם')+'</button>'
-  +(ab?'<h3>יעדים פופולריים</h3><div class="row">'+POP.map(function(p,i){return '<button data-act="poppick" data-i="'+i+'">'+p[0]+'</button>'}).join('')+'</div>':'')+'</div>';
+  +'<h3>יעדים פופולריים</h3><div class="row">'+(ab?POP.map(function(p,i){return '<button data-act="poppick" data-i="'+i+'">'+p[0]+'</button>'}):ILP.map(function(n,i){return '<button data-act="ilpick" data-i="'+i+'">'+n+'</button>'})).join('')+'</div></div>';
  return vFamily0().replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>בני המשפחה</h3>',function(m){return card+m})}
 async function mkDest(h){if(S.busy)return;var q=((h&&h.name)||S.newDest||'').trim().slice(0,60);
  if(!q){S.err2='כתבו שם של יעד.';return render(1)}
+ if(!S.abroad||(h&&h.il)){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv){S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
  if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
  S.busy=true;S.building=q;S.err2='';render(1);
- try{var body={q:q};if(h&&h.code)body.code=h.code;if(h&&h.la!=null){body.la=h.la;body.lo=h.lo}
+ try{var body={q:q};if(h&&h.il)body.il=true;if(h&&h.code)body.code=h.code;if(h&&h.la!=null){body.la=h.la;body.lo=h.lo}
   var j=await api('POST','/api/dest',body),dd=j.dest,k='c_'+Date.now();S.custom[k]=dd;DEST[k]=dd;S.abroad=!!dd.abroad;S.dest=k;S.sel={};S.newDest='';S.fDep='';S.fPrice='';S.ticketNo='';PLACES=[]}
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
  S.busy=false;S.building='';render(1)}
@@ -588,6 +591,7 @@ document.addEventListener('change',function(e){var t=e.target,d=t.dataset;
  if(d.fam!==undefined){S.fam[+d.fam][d.k]=d.k==='a'?Math.max(0,+t.value||0):t.value;render(1);return}
  if(d.f){S[d.f]=t.type==='checkbox'?t.checked:t.value;render(1)}});
 document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.dataset.live;if(k)S[k]=e.target.value;
+ if(e.target.dataset&&e.target.dataset.sug&&!S.abroad){var ql=e.target.value.trim();PLACES=ql.length<2?[]:ILP.filter(function(n){return n.indexOf(ql)>=0}).map(function(n){return{name:n,il:true}});drawSug()}
  if(e.target.dataset&&e.target.dataset.sug&&S.abroad){clearTimeout(plT);var q=e.target.value.trim();plT=setTimeout(function(){if(q.length<2){PLACES=[];drawSug();return}api('GET','/api/places?q='+encodeURIComponent(q)).then(function(j){PLACES=j.places||[];drawSug()}).catch(function(){})},300)}});
 document.addEventListener('click',function(e){var a=e.target.closest('a[data-partner]');
  if(a)api('POST','/api/click',{partner:a.dataset.partner,dest:D().n}).catch(function(){});
@@ -602,6 +606,7 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='cmv')custEdit(b.dataset.day,function(l){var j=+b.dataset.j,k=j+ +b.dataset.dir;if(k>=0&&k<l.length){var x=l[j];l[j]=l[k];l[k]=x}});
  else if(act==='cown')custEdit(b.dataset.day,function(l){var n=(S.ownName||'').trim().slice(0,60);if(n&&l.length<6&&l.indexOf(n)<0){l.push(n);S.ownName=''}});
  else if(act==='placepick'){if(PLACES[+b.dataset.i])mkDest(PLACES[+b.dataset.i])}
+ else if(act==='ilpick'){if(ILP[+b.dataset.i])mkDest({name:ILP[+b.dataset.i],il:true})}
  else if(act==='poppick'){var pp=POP[+b.dataset.i];if(pp)mkDest({name:pp[0],code:pp[1]})}
  else if(act==='apprg')api('POST','/api/admin/approve',{ids:b.dataset.ids.split(','),status:b.dataset.v}).then(loadAdmin).catch(function(){});
  else if(act==='wcopy'){var ta=document.getElementById('wrapTxt'),ok=function(){S.shMsg='הסיכום הועתק.';render(1)},sel=function(){S.shMsg='ההעתקה נחסמה. הטקסט מסומן, אפשר להעתיק אותו ידנית.';render(1);var t2=document.getElementById('wrapTxt');if(t2&&t2.select)t2.select()};try{navigator.clipboard.writeText(ta.value).then(ok,sel)}catch(x){sel()}}

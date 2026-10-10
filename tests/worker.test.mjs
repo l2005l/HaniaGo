@@ -168,3 +168,10 @@ test('search results keep only cities with an airport code', () => {
   const p = mapPlaces([{ name: 'דובאי', code: 'DXB', country_name: 'איחוד האמירויות', coordinates: { lat: 25.2, lon: 55.3 } }, { name: 'x' }, { name: 'y', code: 'toolong' }]);
   assert.deepEqual(p, [{ name: 'דובאי', code: 'DXB', country: 'איחוד האמירויות', la: 25.2, lo: 55.3 }]);
 });
+
+test('a destination asked for as Israeli is stored as domestic, whatever the model says', async () => {
+  const at = [1, 2, 3].map((i) => ({ n: 'a' + i, la: 30.6, lo: 34.8 }));
+  const env = { DB: fakeD1(), AI: { run: async () => ({ response: JSON.stringify({ n: 'מצפה רמון', code: 'TLV', abroad: true, at }) }) } };
+  const r = await (await call(env, 'POST', '/api/dest', { device: dev(1), body: { q: 'מצפה רמון', il: true } })).json();
+  assert.deepEqual([r.dest.abroad, r.dest.code], [0, '']);
+});
