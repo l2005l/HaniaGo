@@ -75,7 +75,45 @@ button.x{min-height:44px;width:44px;padding:0;color:var(--bad)}
 .tl{border-inline-start:3px solid var(--sea);padding-inline-start:12px;display:flex;flex-direction:column;gap:6px}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));display:flex;gap:4px;justify-content:center}
 nav button{flex:1;min-width:0;max-width:110px;border:0;padding:4px 1px;font-size:12.5px;flex-direction:column;gap:2px;background:transparent;color:var(--muted)}
-nav button b{font-family:var(--display);font-size:12px;width:22px;height:22px;border-radius:50%;border:1px solid currentColor;display:flex;align-items:center;justify-content:center}
+.nav4 button{max-width:none;min-height:54px;font-size:13px;gap:3px;border-radius:12px}
+nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.on svg{stroke:var(--sea)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.steps button,.steps button.on{border:0;background:transparent;padding:0;min-height:44px;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;font-size:13px;font-weight:400;color:var(--muted);text-align:start}
+.steps i{display:block;height:8px;border-radius:99px;background:var(--line)}
+.steps .done i,.steps .on i{background:var(--sea)}
+.steps button.on{color:var(--ink);font-weight:700}
+.rail{display:flex;flex-direction:column;border-top:1px dashed var(--line);padding-top:12px}
+.ri{display:grid;grid-template-columns:44px 16px minmax(0,1fr);column-gap:10px}
+.rt{font-weight:700;font-size:14px;padding-top:1px}
+.rd{position:relative}
+.rd::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:3px;margin-left:-1.5px;background:var(--sea)}
+.rd::after{content:'';position:absolute;top:4px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--surface);border:3px solid var(--sea);box-sizing:border-box}
+.ri.leg .rd::before{background:repeating-linear-gradient(var(--sea) 0 6px,transparent 6px 11px)}
+.ri.leg .rd::after{display:none}
+.ri.leg .rt{font-weight:400;color:var(--muted);font-size:13px}
+.ri.main .rd::after{width:16px;height:16px;margin-left:-8px;background:var(--sun);top:14px}
+.ri:last-child .rd::before{bottom:auto;height:8px}
+.rb{padding-bottom:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.rc{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+body.welcome{background:var(--sea)}
+body.welcome nav,body.welcome .top,body.welcome .demo,body.welcome #pass,body.welcome .wrap>.note{display:none}
+.wel{color:var(--on-sea);display:flex;flex-direction:column;gap:16px;padding-top:28px;min-height:calc(100vh - 140px)}
+.wel h2{font-size:36px;line-height:1.14}
+.wel .lead{font-size:18px;opacity:.92}
+.wel .brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:24px}
+.wel .tk{background:var(--surface);color:var(--ink);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.wel .tk .route{display:flex;align-items:center;justify-content:space-between;gap:10px;direction:ltr;font-family:var(--display);font-weight:600;font-size:26px}
+.wel .tk .route i{flex:1;border-top:2px dashed var(--line)}
+.wel .tk .g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;border-top:2px dashed var(--line);padding-top:12px;font-size:15px;font-weight:700}
+.wel .tk .g small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+.wel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.wel li{display:flex;gap:10px;align-items:center}
+.wel li svg{flex:0 0 20px;width:20px;height:20px;fill:none;stroke:var(--sun);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.wel .cta{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.wel .go{font-family:var(--display);font-size:20px;min-height:58px;border:0;border-radius:16px;background:var(--sun);color:var(--on-sun)}
+.wel .alt{background:transparent;color:var(--on-sea);border:1.5px solid currentColor;border-radius:14px;min-height:48px}
+.wel label{color:var(--on-sea)}
 nav button.on{background:var(--sea-soft);color:var(--ink)}
 @media (prefers-reduced-motion:no-preference){button,a.btn{transition:background .15s}}
 </style>
@@ -151,7 +189,7 @@ var FT=[['06:10',1.25,0,0,'חברה סדירה'],['12:40',1.1,0,0,'חברה סד
 var CATS=['אוכל','קניות','אטרקציות','תחבורה','אחר'];
 var S={tab:'family',abroad:true,dest:'rome',fam:[{n:'',a:38},{n:'',a:36},{n:'',a:8},{n:'',a:4}],date:'2026-11-15',nights:4,car:false,budget:'',
  sort:'cheap',direct:false,tod:'all',flight:2,ticketNo:'',ticketCode:'',home:'tlv',mode:'car',leave:'08:00',exp:[],err:'',sel:{},custom:{},fbRate:'good',crKind:'tip'};
-try{var sv=JSON.parse(localStorage.getItem('haniago')||'null');if(sv)for(var k in sv)S[k]=sv[k]}catch(e){}
+try{var sv=JSON.parse(localStorage.getItem('haniago')||'null');if(sv){for(var k in sv)S[k]=sv[k];S.started=true}}catch(e){}
 S.busy=false;S.fbMsg='';S.err2='';S.custom=S.custom||{};for(var ck in S.custom)DEST[ck]=S.custom[ck];
 function save(){try{localStorage.setItem('haniago',JSON.stringify(S))}catch(e){}queueDb()}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -279,13 +317,13 @@ function vPlan(){var d=D(),days=dayOptions(),p=pax();loadWx();
    html+='<div class="card'+(on?' sel':'')+'"><div class="sp"><h3>'+o.name+'</h3>'+(o.fit!==null?'<span class="tag">התאמה למשפחה '+o.fit+'%</span>':'')+'</div><p class="note">'+esc(o.why)+'</p>';
    if(!on&&o.stops.length)html+='<p>'+o.stops.map(function(s){return esc(s.n)}).join(' · ')+'</p>'
     +(o.stops.some(function(s){return WARN[s.n]})?'<p class="warn">יש אזהרות מהרשת על המסלול הזה</p>':'');
-   if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)html+=foodBtns(o.stops,d);if(on)it.forEach(function(x){var s=x.stop;
-    html+='<div class="stop"><div class="sp"><b><span class="num">'+hm(x.t)+'</span> '+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
-    if(s)html+=photoHtml(s,d)+'<div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
+   if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)html+=foodBtns(o.stops,d);if(on){html+='<div class="rail">';it.forEach(function(x){var s=x.stop;
+ html+='<div class="ri'+(x.from?' leg':s?' main':'')+'"><span class="rt num">'+hm(x.t)+'</span><span class="rd"></span><div class="rb">'+(s?'<div class="rc">':'')+'<div class="sp"><b>'+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
+ if(s)html+=photoHtml(s,d)+'<div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')
      +tipsHtml(s,d)
-     +offersHtml(s)+stopExtra(s,d);
-    html+='</div>'});
+     +offersHtml(s)+stopExtra(s,d)+'</div>';
+ html+='</div></div>'});html+='</div>'}
    html+='<div class="sp" style="align-items:center"><span class="num">'+(tot?nis(tot)+' ליום, כולל אוכל ותחבורה':'ללא עלות')+'</span><button data-opt="'+i+':'+o.k+'" class="'+(on?'on':'')+'">'+(on?'נבחר':'בחירה')+'</button></div></div>'})});
  return html+'<div class="row">'+'<button class="grow" data-act="pday" data-i="'+(cur-1)+'">'+(cur===0?'חזרה להכנות':'ליום הקודם')+'</button>'+(cur<n-1?'<button class="pri grow" data-act="pok" data-i="'+cur+'">אישור והמשך ליום '+(cur+2)+'</button>':'<button class="pri grow" data-act="pok" data-i="'+cur+'" data-last="1">אישור והמשך לתקציב</button>')+'</div>'}
 var WX={k:'',r:null},PH={};try{PH=JSON.parse(localStorage.getItem('haniago_ph')||'{}')||{}}catch(e){}
@@ -679,9 +717,22 @@ function custEditor(i,d){var l=custList(i),y=youngest(),mv=function(j,dir,lab,sy
  return h}
 function custEdit(day,fn){if(S.custDest!==S.dest){S.cust={};S.custDest=S.dest}S.cust=S.cust||{};var l=S.cust[day]=S.cust[day]||[];fn(l);S.sel=S.sel||{};S.sel[day]='custom';render(1)}
 var TABS=[['family','משפחה',vFamily],['flight','טיסה',vFlight],['leave','יציאה',vLeave],['plan','מסלול',vPlan],['money','תקציב',vMoney],['share','שיתוף',vShare],['community','קהילה',vCommunity]];
-function render(keep){D();loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0];
- document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=t[2]();
- document.getElementById('nav').innerHTML=TABS.map(function(x,i){return '<button data-go="'+x[0]+'" class="'+(x[0]===t[0]?'on':'')+'"'+(x[0]===t[0]?' aria-current="page"':'')+'><b>'+(i+1)+'</b>'+x[1]+'</button>'}).join('');
+var NAV=[['תכנון',['family','flight','leave'],'<path d="M3 12.5 21 5l-5.5 15-3.5-6.5L3 12.5Z"/>'],['מסלול',['plan'],'<path d="M12 21s-6.5-5.6-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.3"/>'],['תקציב',['money'],'<rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18M15.5 15h2"/>'],['עוד',['share','community'],'<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>']];
+function stepBar(tab){var st=[['family','משפחה ויעד'],['flight',D().abroad?'טיסה':'הגעה'],['leave','יציאה מהבית']],ci=0;st.forEach(function(x,i){if(x[0]===tab)ci=i});
+ return '<div class="steps" role="group" aria-label="שלבי התכנון">'+st.map(function(x,i){return '<button data-go="'+x[0]+'" class="'+(i===ci?'on':i<ci?'done':'')+'"'+(i===ci?' aria-current="step"':'')+'><i></i>'+(i+1)+'. '+x[1]+'</button>'}).join('')+'</div>'}
+function moreBar(tab){return '<div class="seg">'+[['share','שיתוף'],['community','קהילה וטיפים']].map(function(x){return '<button data-go="'+x[0]+'" class="'+(x[0]===tab?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div>'}
+function vWelcome(){var ck='<svg aria-hidden="true" viewBox="0 0 20 20"><path d="M4 10.5l4 4 8-9"/></svg>';
+ return '<div class="wel"><div class="brand"><svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" rx="11" fill="#fff"/><path d="M9 20.5 30 11l-6.5 19-4.2-7.6L9 20.5Z" fill="#0B7A8C"/><circle cx="29.5" cy="28.5" r="3.5" fill="#F2B01E"/></svg>HaniaGo</div>'
+ +'<h2>טיול משפחתי, מתוכנן מהבית ועד המלון</h2><p class="lead">מזינים גילים, יעד ותאריכים, ומקבלים טיסות אמיתיות, מסלול לכל יום וניווט מוכן.</p>'
+ +'<div class="tk"><div class="route"><span>TLV</span><i></i><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="#0B7A8C"><path d="M2 12.5 22 4l-6 17-4-7-10-1.5Z"/></svg><i></i><span>GO</span></div><div class="g"><span><small>טיסה</small>מחיר אמיתי</span><span><small>מסלול</small>יום אחרי יום</span><span><small>ניווט</small>בלחיצה אחת</span></div></div>'
+ +'<ul><li>'+ck+'מותאם לגיל של כל ילד</li><li>'+ck+'בחו״ל ובארץ, עם רכב או בלי</li><li>'+ck+'בחינם, בלי הרשמה</li></ul>'
+ +'<div class="cta">'+(S.wJoin?'<label for="wj">הדביקו את הקישור שקיבלתם<input id="wj" data-live="wJoinTxt" value="'+esc(S.wJoinTxt||'')+'" placeholder="https://go.hania360.com/#join=…"></label>'+(S.wMsg?'<p role="alert">'+esc(S.wMsg)+'</p>':'')+'<button class="go" data-act="wjoin">הצטרפות לטיול</button><button class="alt" data-act="start">תכנון טיול חדש</button>'
+  :'<button class="go" data-act="start">מתחילים לתכנן</button><button class="alt" data-act="wjopen">יש לי קישור לטיול משותף</button>')+'</div></div>'}
+function render(keep){D();var wel=!S.started;document.body.classList.toggle('welcome',wel);
+ if(wel){document.getElementById('pass').innerHTML='';document.getElementById('main').innerHTML=vWelcome();document.getElementById('nav').innerHTML='';if(!keep)window.scrollTo(0,0);return}
+ loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0],gi=0;NAV.forEach(function(g,i){if(g[1].indexOf(t[0])>=0)gi=i});if(gi===0)S.lastP=t[0];
+ document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=(gi===0?stepBar(t[0]):gi===3?moreBar(t[0]):'')+t[2]();
+ var nv=document.getElementById('nav');nv.className='nav4';nv.innerHTML=NAV.map(function(g,i){var to=i===0?(S.lastP||'family'):g[1][0];return '<button data-go="'+to+'" class="'+(i===gi?'on':'')+'"'+(i===gi?' aria-current="page"':'')+'><svg aria-hidden="true" viewBox="0 0 24 24">'+g[2]+'</svg>'+g[0]+'</button>'}).join('');
  save();if(!keep)window.scrollTo(0,0)}
 document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var d=b.dataset;
  if(d.go){S.tab=d.go;S.err='';try{history.replaceState(null,'','#'+d.go)}catch(x){}render();return}
@@ -711,6 +762,9 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='mkdest')mkDest(null);
  else if(act==='cadd')custEdit(b.dataset.day,function(l){if(l.length<6&&l.indexOf(b.dataset.n)<0)l.push(b.dataset.n)});
  else if(act==='myhotel')setMyHotel();
+ else if(act==='start'){S.started=true;S.wJoin=false;S.tab='family';render()}
+ else if(act==='wjopen'){S.wJoin=true;S.wMsg='';render(1)}
+ else if(act==='wjoin'){var jm=String(S.wJoinTxt||'').match(/join=([A-Za-z0-9_-]{24,48})/);if(!jm){S.wMsg='לא מצאתי קישור תקין. הדביקו את הקישור המלא שקיבלתם.';render(1)}else{TRIP=jm[1];try{localStorage.setItem('haniago_trip',TRIP)}catch(x){}S.started=true;S.wJoin=false;dbLast='';pullTrip().then(function(){S.started=true;render()})}}
  else if(act==='tgon'){var by=new Uint8Array(24);crypto.getRandomValues(by);TRIP=Array.prototype.map.call(by,function(x){return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[x%62]}).join('');try{localStorage.setItem('haniago_trip',TRIP)}catch(x){}dbLast='';S.tgMsg='';save();render(1)}
  else if(act==='tgoff'){TRIP='';try{localStorage.removeItem('haniago_trip')}catch(x){}dbLast='';S.tgMsg='';save();render(1)}
  else if(act==='tgcopy'){var ok2=function(){S.tgMsg='הקישור הועתק.';render(1)};try{navigator.clipboard.writeText(joinUrl()).then(ok2,function(){S.tgMsg='ההעתקה נחסמה. סמנו את הקישור והעתיקו ידנית.';render(1)})}catch(x){S.tgMsg='סמנו את הקישור והעתיקו ידנית.';render(1)}}
@@ -732,7 +786,7 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='rtre'){RT.k='';render(1)}});
 async function pullTrip(){try{var j=await api('GET','/api/trip');if(j&&j.state&&j.state!==dbLast){var o=JSON.parse(j.state),tab=S.tab,pd=S.pday,lfn=S.famName,lf=S.fam,tn=S.ticketNo,tc=S.ticketCode;for(var k in o)S[k]=o[k];S.tab=tab;S.pday=pd;S.famName=lfn;S.ticketNo=tn;S.ticketCode=tc;S.fam.forEach(function(m,i){if(lf[i]&&lf[i].n)m.n=lf[i].n});S.busy=false;S.fbMsg='';for(var ck in S.custom||{})DEST[ck]=S.custom[ck];dbLast=j.state;return true}}catch(e){}return false}
 function todayIdx(){var a=new Date(S.date+'T00:00'),n=new Date();n.setHours(0,0,0,0);var i=Math.round((n-a)/864e5);return isNaN(i)||i<0||i>nights()?-1:i}
-(async function(){await pullTrip();var ti=todayIdx();if(ti>=0&&!HASHTAB){S.tab='plan';S.pday=ti}
+(async function(){if(await pullTrip()||TRIP)S.started=true;var ti=todayIdx();if(ti>=0&&!HASHTAB){S.tab='plan';S.pday=ti}
  if(ADMIN)loadAdmin();render(1)})();
 document.addEventListener('visibilitychange',function(){if(document.visibilityState!=='visible'||!TRIP)return;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;pullTrip().then(function(ch){if(ch)render(1)})});
 (function(){var b=document.getElementById('inst'),help=document.getElementById('instHelp'),ev=null;if(!b)return;
