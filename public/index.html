@@ -312,6 +312,7 @@ function enName(d){return d.en||EN[S.dest]||d.n}
 function addDays(s,n){var d=new Date(s+'T12:00');if(isNaN(d))return s;d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function bookingUrl(d){var ad=0,ch=[];S.fam.forEach(function(m){var g=+m.a||0;if(g>=18)ad++;else ch.push(g)});
  return 'https://www.booking.com/searchresults.html?ss='+encodeURIComponent(enName(d))+'&checkin='+S.date+'&checkout='+addDays(S.date,nights())+'&group_adults='+Math.max(1,ad)+'&group_children='+ch.length+ch.map(function(g){return '&age='+g}).join('')+'&lang=he&selected_currency=ILS'+(AFF.booking?'&aid='+AFF.booking:'')}
+function tiqetsUrl(s,d){return 'https://www.tiqets.com/en/search?q='+encodeURIComponent(((s.en||'')+' '+enName(d)).trim())}
 function gygUrl(n,d){return 'https://www.getyourguide.com/s/?q='+encodeURIComponent(n+' '+enName(d))+(AFF.gyg?'&partner_id='+AFF.gyg:'')}
 function skyUrl(d){var f=function(s){return s.slice(2).replace(/-/g,'')};
  return 'https://www.skyscanner.co.il/transport/flights/tlv/'+String(d.code).toLowerCase()+'/'+f(S.date)+'/'+f(addDays(S.date,nights()))+'/?adults='+Math.max(1,pax().a)+(AFF.sky?'&associateid='+AFF.sky:'')}
@@ -330,7 +331,7 @@ function tipsHtml(s,d){var h='';if(s.own)return '<p class="note">עצירה שה
   h+='<p'+(o.kind==='warn'?' class="warn"':'')+'><b>'+(o.kind==='warn'?'אזהרה':'טיפ')+' מהקהילה:</b> '+esc(r.text)+' <span class="note">· '+esc(r.src==='creator'?(r.srcName||'יוצר תוכן'):'משפחות HaniaGo')+' · '+st+' · '+new Date(+r.ts).toLocaleDateString('he-IL')+'</span></p>'});
  return h}
 function msgHtml(){return S.fbMsg?'<p class="'+(S.fbOk?'note':'err')+'" role="status">'+esc(S.fbMsg)+'</p>':''}
-function stopExtra(s,d){var h=(s.a||s.c)?pLink('gyg',gygUrl(s.n,d),'כרטיסים ב-GetYourGuide'):'';
+function stopExtra(s,d){var h=(s.a||s.c)?pLink('tiqets',tiqetsUrl(s,d),'כרטיסים ב-Tiqets'):'';
  if(S.fbOpen===s.n)h+='<div class="stop"><b>איך היה ב'+esc(s.n)+'?</b>'+seg('fbRate',[['good','מעולה'],['ok','בסדר'],['bad','לא מתאים']])
   +'<label for="fbt">מה כדאי שמשפחות אחרות יידעו<textarea id="fbt" data-live="fbText" rows="3" placeholder="התור בכניסה היה שעה, כדאי להזמין מראש">'+esc(S.fbText||'')+'</textarea></label>'+msgHtml()
   +'<div class="row"><button class="pri grow" data-act="fbsend" data-place="'+esc(s.n)+'">'+(S.busy?'שולח…':'שליחה')+'</button><button class="grow" data-act="fbclose">סגירה</button></div></div>';
@@ -538,7 +539,7 @@ function vCommunity(){var d=D(),h='<h2>קהילה וטיפים</h2>';
  h+='<div class="card"><h3>הדיווחים שלי ב'+esc(d.n)+'</h3>'+(mine.length?mine.map(function(o){return '<div class="stop"><div class="sp"><b>'+esc(o.place)+'</b><span class="tag">'+(o.ok?'אושר':o.ver?'מוצג לכולם':'ממתין לאימות')+'</span></div><p>'+esc(o.text)+'</p></div>'}).join(''):'<p class="note">עוד לא שלחתם משוב ליעד הזה. אפשר להוסיף מכל עצירה במסך המסלול.</p>')+'</div>';
  if(ADMIN&&ADM){var by={};(ADM.clicks||[]).forEach(function(c){by[c.partner]=c.c});
   h+='<div class="card"><h3>תור אישור לעורך</h3><p class="note">מגיעים לכאן רק נושאים שמשפחה אחת דיווחה עליהם.</p>'+(ADM.queue.length?ADM.queue.map(function(o){return '<div class="stop"><div class="sp"><b>'+esc(o.place)+', '+esc(o.dest)+'</b><span class="tag">'+(o.kind==='warn'?'אזהרה':'טיפ')+' · '+esc(o.topic)+'</span></div><p>'+esc(o.text)+'</p><p class="note">'+esc(o.src==='creator'?(o.srcName||'יוצר תוכן'):'משפחה')+'</p><div class="row"><button class="pri grow" data-act="apprg" data-ids="'+esc(o.ids.join(','))+'" data-v="yes">אישור</button><button class="grow" data-act="apprg" data-ids="'+esc(o.ids.join(','))+'" data-v="no">דחייה</button></div></div>'}).join(''):'<p class="note">אין נושאים שממתינים.</p>')+'</div>';
-  h+='<div class="card"><h3>שימוש ולחיצות</h3>'+[['booking','Booking'],['gyg','GetYourGuide'],['sky','Skyscanner'],['avia','Aviasales']].map(function(x){return '<div class="sp"><span>לחיצות '+x[1]+'</span><span class="num">'+(by[x[0]]||0)+'</span></div>'}).join('')
+  h+='<div class="card"><h3>שימוש ולחיצות</h3>'+[['avia','Aviasales'],['tiqets','Tiqets'],['booking','Booking'],['sky','Skyscanner']].map(function(x){return '<div class="sp"><span>לחיצות '+x[1]+'</span><span class="num">'+(by[x[0]]||0)+'</span></div>'}).join('')
    +'<div class="sp"><span>חישובי מסלול החודש</span><span class="num">'+ADM.usage.google+' מתוך '+ADM.usage.googleCap+'</span></div><div class="sp"><span>קריאות בינה מלאכותית היום</span><span class="num">'+ADM.usage.ai+'</span></div></div>'}
  else h+='<div class="card"><h3>כניסת עורך</h3><label for="adk">סיסמת עורך<input id="adk" type="password" data-live="admKey" autocomplete="off"></label><button data-act="admin">כניסה</button></div>';
  return h}
