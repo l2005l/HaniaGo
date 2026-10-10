@@ -132,7 +132,7 @@ async function postClick(req, env) {
 
 /* ---- flights: cached real prices from the Travelpayouts Data API ---- */
 export function mapFlights(data, marker = '') {
-  const link = (l) => { if (!l) return ''; const u = 'https://www.aviasales.com' + l; return !marker || /[?&]marker=/.test(u) ? u : u + (u.includes('?') ? '&' : '?') + 'marker=' + encodeURIComponent(marker); };
+  const link = (l) => { if (!l) return ''; const u = 'https://www.aviasales.com' + l; const add = (x, k, v) => (new RegExp('[?&]' + k + '=').test(x) ? x : x + (x.includes('?') ? '&' : '?') + k + '=' + encodeURIComponent(v)); return add(marker ? add(u, 'marker', marker) : u, 'locale', 'he'); };
   const seen = new Set();
   return (Array.isArray(data) ? data : []).filter((f) => f && f.departure_at && f.price > 0).sort((a, b) => a.price - b.price).map((f) => ({
     price: Math.round(f.price), airline: str(f.airline, 4), number: str(f.flight_number, 8), dep: String(f.departure_at).slice(11, 16), date: String(f.departure_at).slice(0, 10),

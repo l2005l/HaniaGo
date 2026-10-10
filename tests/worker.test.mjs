@@ -115,8 +115,8 @@ test('train answers once the timetable table has rows', async () => {
 test('flight rows are mapped and bad rows dropped', () => {
   const f = mapFlights([{ price: 812.4, airline: 'LY', flight_number: 385, departure_at: '2026-11-15T06:10:00+02:00', transfers: 0, duration_to: 215, link: '/search/x' }, { price: 0 }, null]);
   assert.equal(f.length, 1); assert.deepEqual([f[0].price, f[0].dep, f[0].dur, f[0].transfers], [812, '06:10', 215, 0]);
-  assert.equal(mapFlights([{ price: 1, departure_at: '2026-11-15T06:10', link: '/search/x?a=1' }], '583460')[0].link, 'https://www.aviasales.com/search/x?a=1&marker=583460');
-  assert.equal(mapFlights([{ price: 1, departure_at: '2026-11-15T06:10', link: '/s?marker=9' }], '583460')[0].link, 'https://www.aviasales.com/s?marker=9');
+  assert.equal(mapFlights([{ price: 1, departure_at: '2026-11-15T06:10', link: '/search/x?a=1' }], '583460')[0].link, 'https://www.aviasales.com/search/x?a=1&marker=583460&locale=he');
+  assert.equal(mapFlights([{ price: 1, departure_at: '2026-11-15T06:10', link: '/s?marker=9' }], '583460')[0].link, 'https://www.aviasales.com/s?marker=9&locale=he');
 });
 
 test('the same outbound flight is listed once, at its cheapest price', () => {
