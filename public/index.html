@@ -269,7 +269,7 @@ function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d
 function tlCost(it){return it.reduce(function(s,x){return s+x.cost},0)}
 function vPlan(){var d=D(),days=dayOptions(),p=pax();
  var html='<h2>המסלול ב'+esc(d.n)+'</h2><p class="note">לכל יום יש כמה מסלולים שמותאמים לגילאים שהזנתם. המסלול שנבחר נפתח כיום מלא, מהבוקר עד החזרה למלון. זמני נסיעה ומחירים הם הערכה לדוגמה.</p>'
- +'<div class="card"><div class="ph">תמונה של המלון</div><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>'+myHotelCard(d)+minePlanCard(d)+extras(d);
+ +'<div class="card"><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>'+myHotelCard(d)+minePlanCard(d)+extras(d);
  days.forEach(function(day,i){html+='<h3>'+dayLabel(i)+(i===0?' · הגעה':i===days.length-1?' · חזרה':'')+'</h3>';
   day.opts.forEach(function(o){var on=o.k===day.sel,it=timeline(i,o.stops),tot=tlCost(it);
    html+='<div class="card'+(on?' sel':'')+'"><div class="sp"><h3>'+o.name+'</h3>'+(o.fit!==null?'<span class="tag">התאמה למשפחה '+o.fit+'%</span>':'')+'</div><p class="note">'+esc(o.why)+'</p>';
@@ -619,12 +619,18 @@ async function planMine(){if(S.planBusy)return;var names=planNames(),d=D();if(!n
   S.planRes={dest:S.dest,placed:placed,days:used,left:pts.filter(function(x){return x.left}).map(function(x){return x.n}),miss:pts.filter(function(x){return x.la==null&&!x.left}).map(function(x){return x.n}),notes:notes}}
  catch(e){S.planMsg='הסידור נכשל הפעם. נסו שוב בעוד רגע.'}
  S.planBusy='';render(1)}
-function geo(q,d){return api('GET','/api/geo?q='+encodeURIComponent(q+' '+d.n)+'&la='+DEST[S.dest].hotel.la+'&lo='+DEST[S.dest].hotel.lo)}
-function myHotelCard(d){var m=d.hotel.mine?S.myHotel:null;
- return '<div class="card"><h3>'+(m?'המלון שלכם':'כבר הזמנתם מלון?')+'</h3>'+(m?'<p>'+esc(m.n)+'<br><span class="note">'+esc(m.label||'')+'</span></p><p class="note">כל המסלולים, המפות והניווט יוצאים וחוזרים למלון הזה.</p><button data-act="myhoteldel">חזרה למלון המוצע</button>'
-  :'<p class="note">כתבו את שם המלון או הכתובת, והמסלולים והמפות של כל הימים יתעדכנו לפיו. הזמנה ב-Booking לא מתעדכנת כאן לבד.</p><label for="mh">שם המלון או כתובת<input id="mh" data-live="mhName" value="'+esc(S.mhName||'')+'" placeholder="Hotel Artemide"></label><label for="mhp">מחיר ללילה לכל המשפחה בשקלים, לא חובה<input id="mhp" type="number" inputmode="numeric" data-live="mhPrice" value="'+esc(S.mhPrice||'')+'"></label>'+(S.mhMsg?'<p class="err" role="alert">'+esc(S.mhMsg)+'</p>':'')+'<button data-act="myhotel">'+(S.mhBusy?'מחפש במפה…':'עדכון המלון')+'</button>')+'</div>'}
-function setMyHotel(){var n=(S.mhName||'').trim().slice(0,80),d=D();if(!n||S.mhBusy)return;S.mhBusy=true;S.mhMsg='';render(1);
- geo(n,d).then(function(j){S.mhBusy=false;if(j&&j.found){S.myHotel={dest:S.dest,n:n,la:j.la,lo:j.lo,label:j.label,p:+S.mhPrice||0};S.mhName='';S.mhPrice=''}else S.mhMsg='לא מצאתי את המקום במפה. נסו שם מלא באנגלית, או רחוב ומספר.';render(1)}).catch(function(){S.mhBusy=false;S.mhMsg='החיפוש במפה לא זמין כרגע. נסו שוב בעוד רגע.';render(1)})}
+function geo(q,d){if(/^https?:\/\//i.test(q))return api('GET','/api/geo?link='+encodeURIComponent(q));return api('GET','/api/geo?q='+encodeURIComponent(q)+'&city='+encodeURIComponent(enName(d))+'&la='+DEST[S.dest].hotel.la+'&lo='+DEST[S.dest].hotel.lo)}
+function mapPt(la,lo){return 'https://www.google.com/maps/search/?api=1&query='+la+','+lo}
+function myHotelCard(d){var m=d.hotel.mine?S.myHotel:null,o=S.mhOpts&&S.mhOpts.dest===S.dest?S.mhOpts:null;
+ if(m)return '<div class="card"><h3>המלון שלכם</h3><p>'+esc(m.n)+'<br><span class="note">'+esc(m.label||'')+'</span></p><a class="btn" target="_blank" rel="noopener" href="'+mapPt(m.la,m.lo)+'">בדיקת הנקודה במפה</a><p class="note">כל המסלולים, המפות והניווט יוצאים וחוזרים לנקודה הזאת. אם היא לא נכונה, חזרו למלון המוצע ונסו שוב עם קישור מ-Google Maps.</p><button data-act="myhoteldel">חזרה למלון המוצע</button></div>';
+ var h='<div class="card"><h3>כבר הזמנתם מלון?</h3><p class="note">הכי מדויק: פתחו את המלון ב-Google Maps, לחצו שיתוף, והדביקו כאן את הקישור. אפשר גם לכתוב רחוב ומספר, או את שם המלון. הזמנה ב-Booking לא מתעדכנת כאן לבד.</p><label for="mh">קישור מ-Google Maps, כתובת או שם המלון<input id="mh" data-live="mhName" value="'+esc(S.mhName||'')+'" placeholder="Király u. 8"></label><label for="mhp">מחיר ללילה לכל המשפחה בשקלים, לא חובה<input id="mhp" type="number" inputmode="numeric" data-live="mhPrice" value="'+esc(S.mhPrice||'')+'"></label>'+(S.mhMsg?'<p class="err" role="alert">'+esc(S.mhMsg)+'</p>':'')+'<button data-act="myhotel">'+(S.mhBusy?'מחפש במפה…':'חיפוש המלון')+'</button>';
+ if(o)h+='<div class="stop"><b>איזה מהם המלון שלכם?</b>'+o.list.map(function(x,i){return '<div class="sp" style="align-items:center"><span>'+esc(x.label)+'<br><a target="_blank" rel="noopener" href="'+mapPt(x.la,x.lo)+'">בדיקה במפה</a></span><button data-act="mhpick" data-i="'+i+'">זה המלון</button></div>'}).join('')+'<p class="note">אף אחד לא מתאים? הדביקו קישור שיתוף מ-Google Maps, זה תמיד מדויק.</p></div>';
+ return h+'</div>'}
+function setMyHotel(){var n=(S.mhName||'').trim().slice(0,500),d=D();if(!n||S.mhBusy)return;S.mhBusy=true;S.mhMsg='';S.mhOpts=null;render(1);var link=/^https?:\/\//i.test(n);
+ geo(n,d).then(function(j){S.mhBusy=false;if(j&&j.found&&link){S.myHotel={dest:S.dest,n:'המלון שלכם',la:j.la,lo:j.lo,label:j.label,p:+S.mhPrice||0};S.mhName='';S.mhPrice=''}
+  else if(j&&j.found)S.mhOpts={dest:S.dest,q:n.slice(0,80),list:j.opts&&j.opts.length?j.opts:[{la:j.la,lo:j.lo,label:j.label}]};
+  else S.mhMsg=link?'לא הצלחתי לקרוא נקודה מהקישור. פתחו את המלון ב-Google Maps בדפדפן והעתיקו את הכתובת המלאה משורת הכתובת.':'לא מצאתי במפה. נסו רחוב ומספר, או הדביקו קישור מ-Google Maps.';render(1)}).catch(function(){S.mhBusy=false;S.mhMsg='החיפוש במפה לא זמין כרגע. נסו שוב בעוד רגע.';render(1)})}
+function pickMyHotel(i){var o=S.mhOpts,x=o&&o.list[i];if(!x)return;S.myHotel={dest:S.dest,n:o.q,la:x.la,lo:x.lo,label:x.label,p:+S.mhPrice||0};S.mhOpts=null;S.mhName='';S.mhPrice='';render(1)}
 function ownGeo(n){var d=D(),k=S.dest+'|'+n;S.own=S.own||{};if(S.own[k]||GEO[k])return;GEO[k]=1;geo(n,d).then(function(j){S.own[k]=j&&j.found?{la:j.la,lo:j.lo,label:j.label}:{miss:1};render(1)}).catch(function(){delete GEO[k]})}
 function custList(i){return (S.custDest===S.dest&&S.cust&&S.cust[i])||[]}
 function custStops(i){var d=D(),y=youngest();return custList(i).map(function(n){var a=d.at.filter(function(x){return x.n===n})[0];if(a)return Object.assign({},a,{small:y<a.min});var g=(S.own||{})[S.dest+'|'+n];if(!g)ownGeo(n);var hit=g&&!g.miss;var pn=(S.pnote||{})[S.dest+'|'+n];return {n:n,own:!hit,mine:true,pn:pn,la:hit?g.la:d.hotel.la,lo:hit?g.lo:d.hotel.lo,who:'all',min:0,a:0,c:0,rec:hit?'זוהה במפה: '+g.label:g?'לא זוהה במפה, הניווט נפתח לפי השם':'מחפש במפה…'}})}
@@ -667,6 +673,7 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='mkdest')mkDest(null);
  else if(act==='cadd')custEdit(b.dataset.day,function(l){if(l.length<6&&l.indexOf(b.dataset.n)<0)l.push(b.dataset.n)});
  else if(act==='myhotel')setMyHotel();
+ else if(act==='mhpick')pickMyHotel(+b.dataset.i);
  else if(act==='planmine')planMine();
  else if(act==='myhoteldel'){S.myHotel=null;render(1)}
  else if(act==='cdel')custEdit(b.dataset.day,function(l){l.splice(+b.dataset.j,1)});

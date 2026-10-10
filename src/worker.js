@@ -271,26 +271,47 @@ async function getOffers(req, env, url) {
 export function mapGeo(list, kind) {
   const ok = (la, lo) => Number.isFinite(la) && Number.isFinite(lo) && (la !== 0 || lo !== 0);
   if (kind === 'photon') {
-    const f = list && Array.isArray(list.features) ? list.features[0] : null, c = f && f.geometry && f.geometry.coordinates, pr = (f && f.properties) || {};
-    return c && ok(+c[1], +c[0]) ? { found: true, la: +c[1], lo: +c[0], label: str([pr.name, pr.city, pr.country].filter(Boolean).join(', '), 120) } : null;
+    return (list && Array.isArray(list.features) ? list.features : []).map((f) => { const c = f && f.geometry && f.geometry.coordinates, pr = (f && f.properties) || {};
+      return c && ok(+c[1], +c[0]) ? { la: +c[1], lo: +c[0], label: str([pr.name, [pr.street, pr.housenumber].filter(Boolean).join(' '), pr.city, pr.country].filter(Boolean).join(', '), 140) } : null; }).filter(Boolean);
   }
-  const x = Array.isArray(list) ? list[0] : null;
-  return x && ok(+x.lat, +x.lon) ? { found: true, la: +x.lat, lo: +x.lon, label: str(x.display_name, 120) } : null;
+  return (Array.isArray(list) ? list : []).filter((x) => x && ok(+x.lat, +x.lon)).map((x) => ({ la: +x.lat, lo: +x.lon, label: str(x.display_name, 140) }));
+}
+/* coordinates out of a Google Maps link: the pin (!3d!4d) first, then the view centre */
+export function parseMapLink(u) {
+  const t = decodeURIComponent(String(u || '')), m = t.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || t.match(/[?&](?:q|ll|query|destination)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/) || t.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (!m) return null;
+  const la = +m[1], lo = +m[2];
+  return Math.abs(la) <= 90 && Math.abs(lo) <= 180 ? { la, lo } : null;
+}
+const MAPHOST = /^(maps\.app\.goo\.gl|goo\.gl|(www\.|maps\.)?google\.[a-z.]{2,6})$/;
+async function fromLink(link) {
+  let u = link;
+  for (let i = 0; i < 5; i++) {
+    let url; try { url = new URL(u); } catch { return null; }
+    if (url.protocol !== 'https:' || !MAPHOST.test(url.hostname)) return null;
+    const hit = parseMapLink(u); if (hit) return hit;
+    try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 HaniaGo' } }); const next = r.headers.get('location'); if (!next) return null; u = new URL(next, u).toString(); } catch { return null; }
+  }
+  return null;
 }
 async function getGeo(req, env, url) {
-  const q = str(url.searchParams.get('q'), 80), la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo'));
+  const link = str(url.searchParams.get('link'), 600);
+  if (link) { const p = await fromLink(link); return json(p ? { found: true, la: p.la, lo: p.lo, label: 'לפי הקישור מ-Google Maps', opts: [] } : { found: false, reason: 'link' }); }
+  const q = str(url.searchParams.get('q'), 80), city = str(url.searchParams.get('city'), 60), la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo'));
   if (q.length < 2) return bad('q');
-  const near = la != null && lo != null, k = 'geo:' + q.toLowerCase() + (near ? ':' + la.toFixed(1) + ',' + lo.toFixed(1) : '');
+  const near = la != null && lo != null, k = 'geo3:' + q.toLowerCase() + '|' + city.toLowerCase() + (near ? ':' + la.toFixed(1) + ',' + lo.toFixed(1) : '');
   const hit = await cacheGet(env, k); if (hit) return json(hit);
   if (await bump(env, 'geo:' + today()) > 2000) return json({ found: false, reason: 'limit' });
   const get = async (u) => { try { const r = await fetch(u, { headers: { 'user-agent': 'HaniaGo/1.0 (https://go.hania360.com)', 'accept-language': 'he,en' } }); return r.ok ? await r.json() : null; } catch { return null; } };
-  const nom = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q);
-  const box = near ? '&viewbox=' + [lo - 0.7, la + 0.7, lo + 0.7, la - 0.7].map((v) => v.toFixed(3)).join(',') : '';
-  let out = near ? mapGeo(await get(nom + box + '&bounded=1')) : null;
-  if (!out) out = mapGeo(await get('https://photon.komoot.io/api/?limit=1&q=' + encodeURIComponent(q) + (near ? '&lat=' + la + '&lon=' + lo : '')), 'photon');
-  if (!out && !near) out = mapGeo(await get(nom));
-  if (near && out && (Math.abs(out.la - la) > 3 || Math.abs(out.lo - lo) > 3)) out = null;
-  out = out || { found: false };
+  const full = city && !q.toLowerCase().includes(city.toLowerCase()) ? q + ', ' + city : q;
+  const nom = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&q=', box = near ? '&viewbox=' + [lo - 0.7, la + 0.7, lo + 0.7, la - 0.7].map((v) => v.toFixed(3)).join(',') + '&bounded=1' : '';
+  const ph = (t) => 'https://photon.komoot.io/api/?limit=3&q=' + encodeURIComponent(t) + (near ? '&lat=' + la + '&lon=' + lo : '');
+  let all = mapGeo(await get(nom + encodeURIComponent(q) + box));
+  if (all.length < 3) all = all.concat(mapGeo(await get(ph(full)), 'photon'));
+  if (!all.length && full !== q) all = mapGeo(await get(nom + encodeURIComponent(full)));
+  const opts = [];
+  for (const x of all) { if (near && (Math.abs(x.la - la) > 1.5 || Math.abs(x.lo - lo) > 1.5)) continue; if (opts.some((o) => Math.abs(o.la - x.la) < 0.0004 && Math.abs(o.lo - x.lo) < 0.0004)) continue; opts.push(x); if (opts.length === 4) break; }
+  const out = opts.length ? { found: true, la: opts[0].la, lo: opts[0].lo, label: opts[0].label, opts } : { found: false };
   await cachePut(env, k, out, (out.found ? 90 : 1) * 864e5);
   return json(out);
 }

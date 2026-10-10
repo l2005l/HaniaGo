@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -180,8 +180,11 @@ test('notes keep only the places that were asked about, and a warning needs a re
   const out = cleanNotes({ notes: [{ n: 'A', note: 'סגור בחורף', warn: true }, { n: 'B', note: '', warn: true }, { n: 'Z', note: 'x' }] }, ['A', 'B', 'C']);
   assert.deepEqual(out, [{ n: 'A', note: 'סגור בחורף', warn: true }, { n: 'B', note: '', warn: false }, { n: 'C', note: '', warn: false }]);
 });
-test('map lookup reads both providers and rejects an empty answer', () => {
-  assert.equal(mapGeo([]), null);
-  assert.equal(mapGeo([{ lat: '41.9', lon: '12.49', display_name: 'Hotel' }]).la, 41.9);
-  assert.equal(mapGeo({ features: [{ geometry: { coordinates: [12.49, 41.9] }, properties: { name: 'H' } }] }, 'photon').lo, 12.49);
+test('map lookup reads both providers, and a Google Maps link gives the pin', () => {
+  assert.deepEqual(mapGeo([]), []);
+  assert.equal(mapGeo([{ lat: '41.9', lon: '12.49', display_name: 'Hotel' }])[0].la, 41.9);
+  assert.equal(mapGeo({ features: [{ geometry: { coordinates: [12.49, 41.9] }, properties: { name: 'H' } }] }, 'photon')[0].lo, 12.49);
+  assert.deepEqual(parseMapLink('https://www.google.com/maps/place/X/@47.49,19.05,17z/data=!3m1!4b1!4m6!3m5!1s0x0:0x0!8m2!3d47.4983!4d19.0571'), { la: 47.4983, lo: 19.0571 });
+  assert.deepEqual(parseMapLink('https://www.google.com/maps/@47.49,19.05,17z'), { la: 47.49, lo: 19.05 });
+  assert.equal(parseMapLink('https://www.google.com/maps/place/X'), null);
 });
