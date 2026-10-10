@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -133,6 +133,9 @@ test('offers match attractions by name in either direction', () => {
 test('a generated destination is validated before it is stored', () => {
   assert.equal(cleanDest({ error: true }), null);
   assert.equal(cleanDest({ n: 'x', hotel: { n: 'h', la: 999, lo: 1 }, at: [] }), null);
+  const three = [1, 2, 3].map((i) => ({ n: 'a' + i, la: 25 + i / 100, lo: 55 }));
+  const noHotel = cleanDest({ n: 'דובאי', at: three }, { code: 'DXB', la: 25.2, lo: 55.3 });
+  assert.deepEqual([noHotel.code, noHotel.abroad, noHotel.hotel.la, noHotel.hotel.n], ['DXB', 1, 25.2, 'מלון משפחתי במרכז העיר']);
   const at = [1, 2, 3].map((i) => ({ n: 'a' + i, la: 41 + i / 100, lo: 2, who: 'weird', min: '4', a: 10, c: 5, rec: 'r' }));
   const d = cleanDest({ n: 'ברצלונה', en: 'Barcelona', code: 'bcn', abroad: true, hotel: { n: 'h', la: 41.4, lo: 2.1, p: 600 }, at });
   assert.equal(d.code, 'BCN'); assert.equal(d.at[0].who, 'all'); assert.equal(d.at[0].min, 4);
@@ -144,4 +147,24 @@ test('a built destination is cached, so the model runs once for everyone', async
   await call(env, 'POST', '/api/dest', { device: dev(1), body: { q: 'Barcelona' } });
   const r = await (await call(env, 'POST', '/api/dest', { device: dev(2), body: { q: 'barcelona' } })).json();
   assert.equal(r.dest.n, 'ברצלונה'); assert.equal(runs, 1);
+});
+
+test('a model answer wrapped in prose or a code fence still parses', () => {
+  assert.deepEqual(looseJson('Here you go:\n```json\n{"n":"x"}\n```'), { n: 'x' });
+  assert.equal(looseJson('no json here'), null);
+  assert.equal(looseJson('{"n":"cut off'), null);
+});
+
+test('a destination that fails once is retried, and the search key is the airport code', async () => {
+  let runs = 0; const at = [1, 2, 3].map((i) => ({ n: 'a' + i, la: 25, lo: 55 }));
+  const env = { DB: fakeD1(), AI: { run: async () => (++runs === 1 ? { response: '{"n":"cut' } : { response: JSON.stringify({ n: 'דובאי', at }) }) } };
+  const r = await (await call(env, 'POST', '/api/dest', { device: dev(1), body: { q: 'דובאי', code: 'dxb', la: 25.2, lo: 55.3 } })).json();
+  assert.equal(r.dest.code, 'DXB'); assert.equal(runs, 2);
+  await call(env, 'POST', '/api/dest', { device: dev(2), body: { q: 'Dubai', code: 'DXB' } });
+  assert.equal(runs, 2, 'second family gets the stored destination');
+});
+
+test('search results keep only cities with an airport code', () => {
+  const p = mapPlaces([{ name: 'דובאי', code: 'DXB', country_name: 'איחוד האמירויות', coordinates: { lat: 25.2, lon: 55.3 } }, { name: 'x' }, { name: 'y', code: 'toolong' }]);
+  assert.deepEqual(p, [{ name: 'דובאי', code: 'DXB', country: 'איחוד האמירויות', la: 25.2, lo: 55.3 }]);
 });

@@ -540,6 +540,24 @@ function vCommunity(){var d=D(),h='<h2>קהילה וטיפים</h2>';
    +'<div class="sp"><span>חישובי מסלול החודש</span><span class="num">'+ADM.usage.google+' מתוך '+ADM.usage.googleCap+'</span></div><div class="sp"><span>קריאות בינה מלאכותית היום</span><span class="num">'+ADM.usage.ai+'</span></div></div>'}
  else h+='<div class="card"><h3>כניסת עורך</h3><label for="adk">סיסמת עורך<input id="adk" type="password" data-live="admKey" autocomplete="off"></label><button data-act="admin">כניסה</button></div>';
  return h}
+var POP=[['לונדון','LON'],['פריז','PAR'],['ברצלונה','BCN'],['מדריד','MAD'],['אמסטרדם','AMS'],['ברלין','BER'],['פראג','PRG'],['וינה','VIE'],['מילאנו','MIL'],['ליסבון','LIS'],['לרנקה','LCA'],['פאפוס','PFO'],['רודוס','RHO'],['כרתים','HER'],['סלוניקי','SKG'],['בוקרשט','BUH'],['סופיה','SOF'],['ורנה','VAR'],['ורשה','WAW'],['קרקוב','KRK'],['ציריך','ZRH'],['בטומי','BUS'],['טביליסי','TBS'],['דובאי','DXB'],['אבו דאבי','AUH'],['בנגקוק','BKK'],['ניו יורק','NYC']];
+var PLACES=[],plT=null;
+function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)return;el.innerHTML=PLACES.slice(0,6).map(function(p,i){return '<button data-act="placepick" data-i="'+i+'" style="justify-content:space-between;gap:8px"><span>'+esc(p.name)+'</span><span class="note">'+esc(p.country)+' · '+esc(p.code)+'</span></button>'}).join('')}
+function vFamily(){var ab=S.abroad;
+ var card='<div class="card"><h3>'+(ab?'כל יעד בעולם':'יעד אחר בארץ')+'</h3><p class="note">'+(ab?'מקלידים שם של עיר ובוחרים מהרשימה, או לוחצים על יעד פופולרי. ':'מקלידים שם של יעד ולוחצים על בניית יעד. ')+'רשימת האטרקציות נבנית על ידי בינה מלאכותית ומסומנת כלא מאומתת, עד שמצטברים טיפים מהקהילה.</p>'
+  +'<label for="nd">חיפוש יעד<input id="nd" data-live="newDest" data-sug="1" autocomplete="off" value="'+esc(S.newDest||'')+'" placeholder="'+(ab?'דובאי':'מצפה רמון')+'"></label><div id="sug" class="sec"></div>'
+  +(S.busy&&S.building?'<p class="note" role="status">בונה את '+esc(S.building)+'… זה לוקח עד חצי דקה.</p>':'')+(S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')
+  +'<button data-act="mkdest">'+(S.busy?'בונה את היעד…':'בניית יעד לפי השם')+'</button>'
+  +(ab?'<h3>יעדים פופולריים</h3><div class="row">'+POP.map(function(p,i){return '<button data-act="poppick" data-i="'+i+'">'+p[0]+'</button>'}).join('')+'</div>':'')+'</div>';
+ return vFamily0().replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>בני המשפחה</h3>',function(m){return card+m})}
+async function mkDest(h){if(S.busy)return;var q=((h&&h.name)||S.newDest||'').trim().slice(0,60);
+ if(!q){S.err2='כתבו שם של יעד.';return render(1)}
+ if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
+ S.busy=true;S.building=q;S.err2='';render(1);
+ try{var body={q:q};if(h&&h.code)body.code=h.code;if(h&&h.la!=null){body.la=h.la;body.lo=h.lo}
+  var j=await api('POST','/api/dest',body),dd=j.dest,k='c_'+Date.now();S.custom[k]=dd;DEST[k]=dd;S.abroad=!!dd.abroad;S.dest=k;S.sel={};S.newDest='';S.fDep='';S.fPrice='';S.ticketNo='';PLACES=[]}
+ catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
+ S.busy=false;S.building='';render(1)}
 var TABS=[['family','משפחה',vFamily],['flight','טיסה',vFlight],['leave','יציאה',vLeave],['plan','מסלול',vPlan],['money','תקציב',vMoney],['share','שיתוף',vShare],['community','קהילה',vCommunity]];
 function render(keep){D();loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0];
  document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=t[2]();
@@ -558,7 +576,8 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
 document.addEventListener('change',function(e){var t=e.target,d=t.dataset;
  if(d.fam!==undefined){S.fam[+d.fam][d.k]=d.k==='a'?Math.max(0,+t.value||0):t.value;render(1);return}
  if(d.f){S[d.f]=t.type==='checkbox'?t.checked:t.value;render(1)}});
-document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.dataset.live;if(k)S[k]=e.target.value});
+document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.dataset.live;if(k)S[k]=e.target.value;
+ if(e.target.dataset&&e.target.dataset.sug&&S.abroad){clearTimeout(plT);var q=e.target.value.trim();plT=setTimeout(function(){if(q.length<2){PLACES=[];drawSug();return}api('GET','/api/places?q='+encodeURIComponent(q)).then(function(j){PLACES=j.places||[];drawSug()}).catch(function(){})},300)}});
 document.addEventListener('click',function(e){var a=e.target.closest('a[data-partner]');
  if(a)api('POST','/api/click',{partner:a.dataset.partner,dest:D().n}).catch(function(){});
  var b=e.target.closest('button[data-act]');if(!b)return;var act=b.dataset.act;
@@ -566,7 +585,9 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='fbclose'){S.fbOpen='';S.fbMsg='';render(1)}
  else if(act==='fbsend')doSend(b.dataset.place,S.fbText,S.fbRate==='bad'?'warn':'tip','family','');
  else if(act==='crsend')doSend(S.crPlace||(D().at[0]||{}).n,S.crText,S.crKind==='warn'?'warn':'tip','creator',S.crName);
- else if(act==='mkdest')mkDest();
+ else if(act==='mkdest')mkDest(null);
+ else if(act==='placepick'){if(PLACES[+b.dataset.i])mkDest(PLACES[+b.dataset.i])}
+ else if(act==='poppick'){var pp=POP[+b.dataset.i];if(pp)mkDest({name:pp[0],code:pp[1]})}
  else if(act==='apprg')api('POST','/api/admin/approve',{ids:b.dataset.ids.split(','),status:b.dataset.v}).then(loadAdmin).catch(function(){});
  else if(act==='wcopy'){var ta=document.getElementById('wrapTxt'),ok=function(){S.shMsg='הסיכום הועתק.';render(1)},sel=function(){S.shMsg='ההעתקה נחסמה. הטקסט מסומן, אפשר להעתיק אותו ידנית.';render(1);var t2=document.getElementById('wrapTxt');if(t2&&t2.select)t2.select()};try{navigator.clipboard.writeText(ta.value).then(ok,sel)}catch(x){sel()}}
  else if(act==='flpick'){var f=flSorted()[+b.dataset.i];if(f){S.fDep=f.dep;S.fPrice=f.price;S.ticketNo=f.airline+f.number;render(1)}}
