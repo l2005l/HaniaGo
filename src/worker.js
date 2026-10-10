@@ -300,16 +300,47 @@ export function matchOffers(list, names) {
   const out = {};
   for (const name of names) { const n = norm(name); if (n.length < 3) continue;
     const m = list.filter((o) => { const s = norm(o.storeName); return s.length >= 3 && (s.includes(n) || n.includes(s)); }).slice(0, 2)
-      .map((o) => ({ label: str(o.label, 120), card: str(o.cardName, 60), url: /^https:\/\//.test(o.actionUrl || '') ? o.actionUrl : 'https://save.hania360.com/' }));
+      .map((o) => {
+        const url = new URL('https://save.hania360.com/');
+        url.searchParams.set('store', o.storeName);
+        if (o.cardId) url.searchParams.set('card', o.cardId);
+        if (o.deepLinkSource) url.searchParams.set('source', o.deepLinkSource);
+        else url.searchParams.set('offer', o.label || '');
+        return { label: str(o.label, 120), card: str(o.cardName, 60), url: url.toString() };
+      });
     if (m.length) out[name] = m; }
   return out;
 }
 async function getOffers(req, env, url) {
   const names = str(url.searchParams.get('names'), 1500).split('|').map((s) => s.trim()).filter(Boolean).slice(0, 12);
   if (!names.length) return bad('names');
-  let list = await cacheGet(env, 'offers');
+  let list = await cacheGet(env, 'offers-v2');
   if (!list) {
-    try { const r = await fetch(env.OFFERS_URL || 'https://save.hania360.com/api/offers'); const j = await r.json(); list = Array.isArray(j) ? j : j.offers || j.results || []; await cachePut(env, 'offers', list.slice(0, 3000), 3600e3); }
+    try {
+      const r = await fetch(env.OFFERS_URL || 'https://save.hania360.com/api/offers');
+      if (!r.ok) throw new Error('offers unavailable');
+      const j = await r.json();
+      list = Array.isArray(j) ? j : j.offers || j.results || [];
+      try {
+        const response = await fetch(env.SPECIAL_OFFERS_URL || 'https://save.hania360.com/api/special-benefits');
+        if (response.ok) {
+          const special = await response.json();
+          const cardAliases = { 'שלך': 'shelach', 'שלך-לגמלאי': 'shelachretired', 'shelach-pensioner': 'shelachretired', 'kranot-hashoter': 'police', 'כאל-(כאל)': 'cal', 'diners-club': 'diners', hever: 'hever-yellow', 'pais-plus': 'pais', 'בהצדעה': 'behatzdaa', 'תמורה': 'teachers2', tov: 'civil' };
+          for (const benefit of Array.isArray(special.benefits) ? special.benefits : []) {
+            if (!benefit.merchant || !benefit.cardId || !benefit.sourceUrl) continue;
+            if (!['verified', 'needs_verification'].includes(benefit.verificationStatus)) continue;
+            const price = Number(benefit.purchasePrice), face = Number(benefit.faceValue), value = Number(benefit.benefitValue);
+            let label = benefit.benefitType === 'special_price' && price > 0 ? `מחיר מיוחד ${price} ₪`
+              : benefit.benefitType === 'discounted_voucher' && face > 0 && price >= 0 ? `שובר ${face} ₪ ב־${price} ₪`
+              : benefit.benefitType === 'charge_discount' && value > 0 ? `${value}% הנחה בחיוב הכרטיס`
+              : 'הטבה מיוחדת במועדון';
+            if (benefit.verificationStatus !== 'verified') label += ' — ממתינה לאימות';
+            list.push({ storeName: benefit.merchant, cardId: cardAliases[benefit.cardId] || benefit.cardId, cardName: benefit.cardName || benefit.provider, label, deepLinkSource: benefit.sourceUrl });
+          }
+        }
+      } catch { /* Keep regular offers available when the special-benefits service fails. */ }
+      await cachePut(env, 'offers-v2', list.slice(0, 5000), 3600e3);
+    }
     catch { return json({ available: false, offers: {} }); }
   }
   return json({ available: true, offers: matchOffers(list, names) });

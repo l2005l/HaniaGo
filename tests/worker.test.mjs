@@ -121,7 +121,31 @@ test('the same outbound flight is listed once, at its cheapest price', () => {
 
 test('offers match attractions by name in either direction', () => {
   const m = matchOffers([{ storeName: 'המצפה התת ימי', label: '10% הנחה', cardName: 'חבר', actionUrl: 'https://x.test/a' }, { storeName: 'ACE', label: 'z' }], ['המצפה התת ימי אילת', 'טיילת וחוף']);
-  assert.deepEqual(Object.keys(m), ['המצפה התת ימי אילת']); assert.equal(m['המצפה התת ימי אילת'][0].url, 'https://x.test/a');
+  assert.deepEqual(Object.keys(m), ['המצפה התת ימי אילת']);
+  const link = new URL(m['המצפה התת ימי אילת'][0].url);
+  assert.equal(link.origin, 'https://save.hania360.com');
+  assert.equal(link.searchParams.get('store'), 'המצפה התת ימי');
+  assert.equal(link.searchParams.get('offer'), '10% הנחה');
+});
+
+test('offers include special benefits with honest verification status and a direct detail link', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => new Response(JSON.stringify(String(url).includes('special-benefits') ? {
+    benefits: [{ merchant: 'חמת גדר', cardId: 'kranot-hashoter', cardName: 'קרנות השוטרים', benefitType: 'special_price', purchasePrice: null, faceValue: null, benefitValue: null, verificationStatus: 'needs_verification', sourceUrl: 'https://official.example/deal' }],
+  } : { offers: [{ storeName: 'AVIS', cardId: 'isracard', cardName: 'ישראכרט', label: '13% הנחה' }] }), { headers: { 'content-type': 'application/json' } });
+  try {
+    const env = { DB: fakeD1() };
+    const response = await call(env, 'GET', '/api/offers?names=' + encodeURIComponent('AVIS|חמת גדר'));
+    const { offers } = await response.json();
+    assert.match(offers['חמת גדר'][0].label, /ממתינה לאימות/);
+    const direct = new URL(offers['חמת גדר'][0].url);
+    assert.equal(direct.searchParams.get('store'), 'חמת גדר');
+    assert.equal(direct.searchParams.get('card'), 'police');
+    assert.equal(direct.searchParams.get('source'), 'https://official.example/deal');
+    const regular = new URL(offers.AVIS[0].url);
+    assert.equal(regular.searchParams.get('card'), 'isracard');
+    assert.equal(regular.searchParams.get('offer'), '13% הנחה');
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('a generated destination is validated before it is stored', () => {
