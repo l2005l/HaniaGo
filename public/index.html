@@ -39,6 +39,7 @@ h1{font-size:26px} h2{font-size:20px} h3{font-size:16px}
 p{margin:0}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .logo span{color:var(--sea)}
+.top{align-items:center}.top button{white-space:nowrap;font-size:14px;padding:6px 12px}
 .note{font-size:13px;color:var(--muted)}
 .demo{background:var(--sun);color:var(--on-sun);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600}
 .pass{background:var(--sea);color:var(--on-sea);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
@@ -140,7 +141,7 @@ nav button.on{background:var(--sea-soft);color:var(--ink)}
 </head>
 <body>
 <div class="wrap" dir="rtl" lang="he">
-  <div class="top"><h1 class="logo">Hania<span>Go</span></h1><span class="row" style="flex-wrap:nowrap"><button id="inst" hidden>התקנת האפליקציה</button><button data-act="newtrip">טיול חדש</button></span></div>
+  <div class="top"><h1 class="logo">Hania<span>Go</span></h1><span class="row" style="flex-wrap:nowrap"><button id="inst" hidden aria-label="התקנת האפליקציה">התקנה</button><button data-act="newtrip">טיול חדש</button></span></div>
   <p class="note">מהדלת בבית ועד החזרה</p>
   <p id="instHelp" class="demo" hidden>באייפון: פתחו את האתר ב-Safari, לחצו על כפתור השיתוף ובחרו "הוסף למסך הבית".</p>
   <p class="demo">גרסת בטא: מחירי הטיסות אמיתיים. עלויות ביעד וזמני נסיעה הם הערכה, וכדאי לבדוק שעות ומחירים לפני שמזמינים.</p>
