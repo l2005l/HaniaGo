@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -202,4 +202,13 @@ test('a shared trip key replaces the device only when it is long enough', () => 
   assert.equal(tripKey(rq({ 'x-device': dev, 'x-trip': 'short' })), dev);
   assert.equal(tripKey(rq({ 'x-device': dev, 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), 't:abcdefghijklmnopqrstuvwxyz012345');
   assert.equal(tripKey(rq({ 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), '');
+});
+
+test('club benefits join the offers, matched by alias and marked while unverified', () => {
+  const sp = mapSpecial([{ merchant: 'חמת גדר', aliases: ['Hamat Gader'], cardName: 'קרנות השוטרים', benefitType: 'special_price', purchasePrice: 66, verificationStatus: 'needs_verification', sourceUrl: 'https://club.example/x' },
+    { merchant: 'AVIS', provider: 'דיסקונט', benefitType: 'charge_discount', benefitValue: 5, verificationStatus: 'verified' }, { merchant: 'x', benefitType: 'other', conditions: '' }]);
+  assert.equal(sp.length, 2);
+  const m = matchOffers(sp, ['חמת גדר', 'Hamat Gader', 'AVIS']);
+  assert.deepEqual(m['חמת גדר'][0], { label: 'מחיר מיוחד ₪66', card: 'קרנות השוטרים', pending: true, url: 'https://save.hania360.com/' });
+  assert.equal(m['Hamat Gader'].length, 1); assert.equal(m.AVIS[0].label, '5% הנחה'); assert.equal(m.AVIS[0].pending, undefined);
 });
