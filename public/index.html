@@ -312,7 +312,8 @@ function enName(d){return d.en||EN[S.dest]||d.n}
 function addDays(s,n){var d=new Date(s+'T12:00');if(isNaN(d))return s;d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function bookingUrl(d){var ad=0,ch=[];S.fam.forEach(function(m){var g=+m.a||0;if(g>=18)ad++;else ch.push(g)});
  return 'https://www.booking.com/searchresults.html?ss='+encodeURIComponent(enName(d))+'&checkin='+S.date+'&checkout='+addDays(S.date,nights())+'&group_adults='+Math.max(1,ad)+'&group_children='+ch.length+ch.map(function(g){return '&age='+g}).join('')+'&lang=he&selected_currency=ILS'+(AFF.booking?'&aid='+AFF.booking:'')}
-function tiqetsUrl(s,d){return 'https://www.tiqets.com/en/search?q='+encodeURIComponent(((s.en||'')+' '+enName(d)).trim())}
+// Travelpayouts deep link: marker is the partner id, p and campaign_id identify the Tiqets program.
+function tiqetsUrl(s,d){var u='https://www.tiqets.com/en/search?q='+encodeURIComponent(((s.en||'')+' '+enName(d)).trim());return 'https://tp.media/r?marker='+TPM+'&p=2074&campaign_id=89&u='+encodeURIComponent(u)}
 function gygUrl(n,d){return 'https://www.getyourguide.com/s/?q='+encodeURIComponent(n+' '+enName(d))+(AFF.gyg?'&partner_id='+AFF.gyg:'')}
 function skyUrl(d){var f=function(s){return s.slice(2).replace(/-/g,'')};
  return 'https://www.skyscanner.co.il/transport/flights/tlv/'+String(d.code).toLowerCase()+'/'+f(S.date)+'/'+f(addDays(S.date,nights()))+'/?adults='+Math.max(1,pax().a)+(AFF.sky?'&associateid='+AFF.sky:'')}
