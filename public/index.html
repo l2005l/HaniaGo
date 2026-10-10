@@ -269,21 +269,27 @@ function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d
 function tlCost(it){return it.reduce(function(s,x){return s+x.cost},0)}
 function vPlan(){var d=D(),days=dayOptions(),p=pax();
  var html='<h2>המסלול ב'+esc(d.n)+'</h2><p class="note">לכל יום יש כמה מסלולים שמותאמים לגילאים שהזנתם. המסלול שנבחר נפתח כיום מלא, מהבוקר עד החזרה למלון. זמני נסיעה ומחירים הם הערכה לדוגמה.</p>'
- +'<div class="card"><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>'+myHotelCard(d)+minePlanCard(d)+extras(d);
- days.forEach(function(day,i){html+='<h3>'+dayLabel(i)+(i===0?' · הגעה':i===days.length-1?' · חזרה':'')+'</h3>';
+ +'<div class="card"><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>';
+ var n=days.length,cur=S.pday==null?-1:Math.max(-1,Math.min(n-1,+S.pday)),dn=S.pdone&&S.pdone.dest===S.dest?S.pdone.d:{};
+ html=html.replace('</h2>','</h2>'+dayStrip(n,cur,dn));
+ if(cur<0)return html+myHotelCard(d)+minePlanCard(d)+extras(d)+'<button class="pri" data-act="pday" data-i="0">המשך ליום 1</button>';
+ html=html.slice(0,html.indexOf('<div class="card">'));
+ days.forEach(function(day,i){if(i!==cur)return;html+='<h3>'+dayLabel(i)+(i===0?' · הגעה':i===days.length-1?' · חזרה':'')+'</h3>';
   day.opts.forEach(function(o){var on=o.k===day.sel,it=timeline(i,o.stops),tot=tlCost(it);
    html+='<div class="card'+(on?' sel':'')+'"><div class="sp"><h3>'+o.name+'</h3>'+(o.fit!==null?'<span class="tag">התאמה למשפחה '+o.fit+'%</span>':'')+'</div><p class="note">'+esc(o.why)+'</p>';
    if(!on&&o.stops.length)html+='<p>'+o.stops.map(function(s){return esc(s.n)}).join(' · ')+'</p>'
     +(o.stops.some(function(s){return WARN[s.n]})?'<p class="warn">יש אזהרות מהרשת על המסלול הזה</p>':'');
    if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)html+=foodBtns(o.stops,d);if(on)it.forEach(function(x){var s=x.stop;
     html+='<div class="stop"><div class="sp"><b><span class="num">'+hm(x.t)+'</span> '+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
-    if(s)html+='<div class="ph">תמונה של '+esc(s.n)+'</div><div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
+    if(s)html+='<div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')
      +tipsHtml(s,d)
      +offersHtml(s)+stopExtra(s,d);
     html+='</div>'});
    html+='<div class="sp" style="align-items:center"><span class="num">'+(tot?nis(tot)+' ליום, כולל אוכל ותחבורה':'ללא עלות')+'</span><button data-opt="'+i+':'+o.k+'" class="'+(on?'on':'')+'">'+(on?'נבחר':'בחירה')+'</button></div></div>'})});
- return html+'<button class="pri" data-go="money">המשך לתקציב</button>'}
+ return html+'<div class="row">'+'<button class="grow" data-act="pday" data-i="'+(cur-1)+'">'+(cur===0?'חזרה להכנות':'ליום הקודם')+'</button>'+(cur<n-1?'<button class="pri grow" data-act="pok" data-i="'+cur+'">אישור והמשך ליום '+(cur+2)+'</button>':'<button class="pri grow" data-act="pok" data-i="'+cur+'" data-last="1">אישור והמשך לתקציב</button>')+'</div>'}
+function dayStrip(n,cur,dn){var b=function(i,l){return '<button data-act="pday" data-i="'+i+'" class="'+(i===cur?'on':'')+'" style="flex:0 0 auto"'+(i===cur?' aria-current="step"':'')+'>'+l+'</button>'},h=b(-1,'הכנות');for(var i=0;i<n;i++)h+=b(i,(dn[i]?'✓ ':'')+'יום '+(i+1));return '<div class="row" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px">'+h+'</div>'}
+
 function vPlanV2(){var d=D(),days=dayOptions(),p=pax();
  var html='<h2>המסלול ב'+esc(d.n)+'</h2><p class="note">לכל יום יש כמה מסלולים שמותאמים לגילאים שהזנתם. בחרו אחד, והעלות והניווט מתעדכנים. עצירה שנבחרה לא תוצע שוב בימים הבאים.</p>'
  +'<div class="card"><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+'</div>';
@@ -616,7 +622,7 @@ async function planMine(){if(S.planBusy)return;var names=planNames(),d=D();if(!n
   S.pnote=S.pnote||{};notes.forEach(function(x){S.pnote[S.dest+'|'+x.n]={note:x.note,warn:x.warn}});
   var n=nights()+1,days=splitDays(pts,d.hotel,n);S.cust={};S.custDest=S.dest;S.sel=S.sel||{};var used=0,placed=0;
   days.forEach(function(l,di){if(l.length){S.cust[di]=l.map(function(x){return x.n});S.sel[di]='custom';used++;placed+=l.length}else if(S.sel[di]==='custom')delete S.sel[di]});
-  S.planRes={dest:S.dest,placed:placed,days:used,left:pts.filter(function(x){return x.left}).map(function(x){return x.n}),miss:pts.filter(function(x){return x.la==null&&!x.left}).map(function(x){return x.n}),notes:notes}}
+  S.pdone=null;S.planRes={dest:S.dest,placed:placed,days:used,left:pts.filter(function(x){return x.left}).map(function(x){return x.n}),miss:pts.filter(function(x){return x.la==null&&!x.left}).map(function(x){return x.n}),notes:notes}}
  catch(e){S.planMsg='הסידור נכשל הפעם. נסו שוב בעוד רגע.'}
  S.planBusy='';render(1)}
 function geo(q,d){if(/^https?:\/\//i.test(q))return api('GET','/api/geo?link='+encodeURIComponent(q));return api('GET','/api/geo?q='+encodeURIComponent(q)+'&city='+encodeURIComponent(enName(d))+'&la='+DEST[S.dest].hotel.la+'&lo='+DEST[S.dest].hotel.lo)}
@@ -673,6 +679,8 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='mkdest')mkDest(null);
  else if(act==='cadd')custEdit(b.dataset.day,function(l){if(l.length<6&&l.indexOf(b.dataset.n)<0)l.push(b.dataset.n)});
  else if(act==='myhotel')setMyHotel();
+ else if(act==='pday'){S.pday=+b.dataset.i;render();window.scrollTo(0,0)}
+ else if(act==='pok'){if(!S.pdone||S.pdone.dest!==S.dest)S.pdone={dest:S.dest,d:{}};S.pdone.d[b.dataset.i]=1;if(b.dataset.last){S.tab='money';}else S.pday=+b.dataset.i+1;render();window.scrollTo(0,0)}
  else if(act==='mhpick')pickMyHotel(+b.dataset.i);
  else if(act==='planmine')planMine();
  else if(act==='myhoteldel'){S.myHotel=null;render(1)}
