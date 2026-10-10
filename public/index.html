@@ -553,7 +553,8 @@ function vFamily(){var ab=S.abroad;
   +(S.busy&&S.building?'<p class="note" role="status">בונה את '+esc(S.building)+'… זה לוקח עד חצי דקה.</p>':'')+(S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')
   +'<button data-act="mkdest">'+(S.busy?'בונה את היעד…':'בניית יעד לפי השם')+'</button>'
   +'<h3>יעדים פופולריים</h3><div class="row">'+(ab?POP.map(function(p,i){return '<button data-act="poppick" data-i="'+i+'">'+p[0]+'</button>'}):ILP.map(function(n,i){return '<button data-act="ilpick" data-i="'+i+'">'+n+'</button>'})).join('')+'</div></div>';
- return vFamily0().replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>בני המשפחה</h3>',function(m){return card+m})}
+ var endL='<label class="grow" for="end">תאריך חזרה · '+nights()+' לילות<input id="end" type="date" data-end="1" min="'+esc(addDays(S.date,1))+'" max="'+esc(addDays(S.date,14))+'" value="'+esc(addDays(S.date,nights()))+'"></label>';
+ return vFamily0().replace(/<label class="grow" for="nights">[\s\S]*?<\/label>/,function(){return endL}).replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>בני המשפחה</h3>',function(m){return card+m})}
 async function mkDest(h){if(S.busy)return;var q=((h&&h.name)||S.newDest||'').trim().slice(0,60);
  if(!q){S.err2='כתבו שם של יעד.';return render(1)}
  if(!S.abroad||(h&&h.il)){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv){S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
@@ -590,6 +591,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
 document.addEventListener('change',function(e){var t=e.target,d=t.dataset;
  if(d.fam!==undefined){S.fam[+d.fam][d.k]=d.k==='a'?Math.max(0,+t.value||0):t.value;render(1);return}
  if(d.f){S[d.f]=t.type==='checkbox'?t.checked:t.value;render(1)}});
+document.addEventListener('change',function(e){if(!e.target.dataset||!e.target.dataset.end)return;var a=new Date(S.date+'T12:00'),b=new Date(e.target.value+'T12:00');if(isNaN(a)||isNaN(b))return;S.nights=Math.max(1,Math.min(14,Math.round((b-a)/864e5)));render(1)});
 document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.dataset.live;if(k)S[k]=e.target.value;
  if(e.target.dataset&&e.target.dataset.sug&&!S.abroad){var ql=e.target.value.trim();PLACES=ql.length<2?[]:ILP.filter(function(n){return n.indexOf(ql)>=0}).map(function(n){return{name:n,il:true}});drawSug()}
  if(e.target.dataset&&e.target.dataset.sug&&S.abroad){clearTimeout(plT);var q=e.target.value.trim();plT=setTimeout(function(){if(q.length<2){PLACES=[];drawSug();return}api('GET','/api/places?q='+encodeURIComponent(q)).then(function(j){PLACES=j.places||[];drawSug()}).catch(function(){})},300)}});
