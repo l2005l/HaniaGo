@@ -52,13 +52,15 @@ async function askJson(env, system, input) {
 }
 
 /* ---- trip state ---- */
+/* a trip two phones plan together lives under its own long random key, sent as x-trip */
+export function tripKey(req) { const d = deviceOf(req), t = req.headers.get('x-trip') || ''; return !d ? '' : /^[A-Za-z0-9_-]{24,48}$/.test(t) ? 't:' + t : d; }
 async function getTrip(req, env) {
-  const d = deviceOf(req); if (!d) return bad('device');
+  const d = tripKey(req); if (!d) return bad('device');
   const r = await env.DB.prepare('SELECT state,ts FROM trips WHERE device=?').bind(d).first();
   return json(r ? { state: r.state, ts: r.ts } : { state: null });
 }
 async function putTrip(req, env) {
-  const d = deviceOf(req); if (!d) return bad('device');
+  const d = tripKey(req); if (!d) return bad('device');
   const body = await req.text();
   if (body.length > 60000) return bad('too large', 413);
   try { JSON.parse(body); } catch { return bad('json'); }
@@ -183,11 +185,57 @@ async function getRoute(req, env, url) {
 }
 
 /* ---- trains to the airport: answers only once the rail table has been loaded ---- */
+/* the real train to the airport: Google transit, arriving by a given time */
+const ilMin = (iso) => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(iso)); return +p.find((x) => x.type === 'hour').value % 24 * 60 + +p.find((x) => x.type === 'minute').value; };
+export function mapTrain(j) {
+  const rt = j && j.routes && j.routes[0]; if (!rt) return null;
+  const tr = (rt.legs || []).flatMap((l) => l.steps || []).map((x) => x.transitDetails).filter((t) => t && t.stopDetails && t.stopDetails.departureTime && t.stopDetails.arrivalTime);
+  const rail = tr.filter((t) => /RAIL|TRAIN|SUBWAY/.test((t.transitLine && t.transitLine.vehicle && t.transitLine.vehicle.type) || ''));
+  if (!rail.length) return null;
+  const f = rail[0], l = rail[rail.length - 1];
+  return { available: true, dep: ilMin(f.stopDetails.departureTime), arr: ilMin(l.stopDetails.arrivalTime), from: str(f.stopDetails.departureStop && f.stopDetails.departureStop.name, 60), to: str(l.stopDetails.arrivalStop && l.stopDetails.arrivalStop.name, 60), changes: rail.length - 1, bus: tr.length > rail.length };
+}
 async function getTrain(req, env, url) {
-  const from = str(url.searchParams.get('from'), 20), by = num(url.searchParams.get('by')), dow = str(url.searchParams.get('dow'), 1);
-  if (!from || by == null) return bad('params');
-  const r = await env.DB.prepare("SELECT dep,arr FROM rail WHERE from_st=? AND arr<=? AND days LIKE ? ORDER BY arr DESC LIMIT 1").bind(from, by, '%' + dow + '%').first();
-  return json(r ? { available: true, dep: r.dep, arr: r.arr } : { available: false, reason: 'no_data' });
+  const p = (n) => num(url.searchParams.get(n)), from = [p('flat'), p('flng')], faddr = str(url.searchParams.get('faddr'), 60), arrive = str(url.searchParams.get('arrive'), 30);
+  if (!Date.parse(arrive) || (!faddr && from.some((v) => v == null))) return bad('params');
+  if (!env.GOOGLE_KEY) return json({ available: false, reason: 'no_key' });
+  if (Date.parse(arrive) < Date.now()) return json({ available: false, reason: 'past' });
+  const k = 'tr:' + (faddr ? faddr.toLowerCase() : from.map((v) => v.toFixed(3)).join(',')) + ':' + new Date(arrive).toISOString().slice(0, 16);
+  const hit = await cacheGet(env, k); if (hit) return json(hit);
+  const month = 'google:' + today().slice(0, 7);
+  if (await count(env, month) >= +(env.GOOGLE_MONTHLY_CAP || 4500)) return json({ available: false, reason: 'cap' });
+  await bump(env, month);
+  const body = { origin: faddr ? { address: faddr + ', Israel' } : { location: { latLng: { latitude: from[0], longitude: from[1] } } }, destination: { location: { latLng: { latitude: 32.0004, longitude: 34.8706 } } },
+    travelMode: 'TRANSIT', arrivalTime: new Date(arrive).toISOString(), transitPreferences: { allowedTravelModes: ['TRAIN', 'RAIL'] }, languageCode: 'he' };
+  try {
+    const r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GOOGLE_KEY, 'x-goog-fieldmask': 'routes.duration,routes.legs.steps.transitDetails' }, body: JSON.stringify(body) });
+    const out = (r.ok && mapTrain(await r.json())) || { available: false, reason: r.ok ? 'no_train' : 'provider' };
+    await cachePut(env, k, out, (out.available ? 6 : 1) * 3600e3);
+    return json(out);
+  } catch { return json({ available: false, reason: 'provider' }); }
+}
+
+/* ---- weather for the trip days: a forecast when close, last year's same dates when far ---- */
+export function mapWeather(j, kind) {
+  const d = j && j.daily; if (!d || !Array.isArray(d.time)) return null;
+  const n = (a, i) => (a && Number.isFinite(+a[i]) && a[i] !== null ? Math.round(+a[i]) : null);
+  return { available: true, kind, days: d.time.map((t, i) => ({ hi: n(d.temperature_2m_max, i), lo: n(d.temperature_2m_min, i), rain: kind === 'forecast' ? n(d.precipitation_probability_max, i) : null, mm: n(d.precipitation_sum, i) })) };
+}
+async function getWeather(req, env, url) {
+  const la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo')), from = str(url.searchParams.get('from'), 10), nn = Math.max(1, Math.min(15, +url.searchParams.get('n') || 1));
+  if (la == null || lo == null || !/^\d{4}-\d{2}-\d{2}$/.test(from)) return bad('params');
+  const day = 864e5, start = Date.parse(from + 'T00:00:00Z'), now = Date.parse(today() + 'T00:00:00Z'), iso = (t) => new Date(t).toISOString().slice(0, 10);
+  const end = start + (nn - 1) * day, fc = start >= now && end <= now + 15 * day;
+  if (end < now) return json({ available: false, reason: 'past' });
+  const k = 'wx:' + la.toFixed(1) + ',' + lo.toFixed(1) + ':' + from + ':' + nn + ':' + (fc ? today() : 'y'), hit = await cacheGet(env, k); if (hit) return json(hit);
+  const q = '?latitude=' + la + '&longitude=' + lo + '&timezone=auto&daily=temperature_2m_max,temperature_2m_min,precipitation_sum';
+  const u = fc ? 'https://api.open-meteo.com/v1/forecast' + q + ',precipitation_probability_max&start_date=' + iso(start) + '&end_date=' + iso(end)
+    : 'https://archive-api.open-meteo.com/v1/archive' + q + '&start_date=' + iso(start - 364 * day) + '&end_date=' + iso(end - 364 * day);
+  try {
+    const r = await fetch(u), out = (r.ok && mapWeather(await r.json(), fc ? 'forecast' : 'lastyear')) || { available: false, reason: 'provider' };
+    if (out.available) await cachePut(env, k, out, fc ? 3 * 3600e3 : 30 * day);
+    return json(out);
+  } catch { return json({ available: false, reason: 'provider' }); }
 }
 
 /* ---- build any destination once, then serve it to everyone from the table ---- */
@@ -336,7 +384,7 @@ async function postNotes(req, env) {
 const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick,
-  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'POST /api/notes': postNotes,
+  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'POST /api/notes': postNotes,
 };
 export { NOTES };
 export default {

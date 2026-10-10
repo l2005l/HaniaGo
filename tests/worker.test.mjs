@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -90,7 +90,7 @@ test('without provider keys the data endpoints say unavailable instead of failin
   const env = { DB: fakeD1() };
   assert.deepEqual(await (await call(env, 'GET', '/api/flights?dest=FCO&date=2026-11-15')).json(), { available: false, reason: 'no_key' });
   assert.equal((await (await call(env, 'GET', '/api/route?flat=32&flng=34&tlat=32.1&tlng=34.9')).json()).available, false);
-  assert.equal((await (await call(env, 'GET', '/api/train?from=tlv&by=300&dow=0')).json()).available, false);
+  assert.equal((await (await call(env, 'GET', '/api/train?flat=32&flng=34&arrive=2030-01-01T08:00:00Z')).json()).available, false);
   assert.equal((await call(env, 'GET', '/api/flights?dest=xx&date=bad')).status, 400);
 });
 
@@ -104,12 +104,6 @@ test('route lookups stop at the monthly cap and never call Google past it', asyn
     await go(32.1); assert.equal(calls, 1, 'second identical lookup is served from cache');
     await go(32.2); assert.equal((await go(32.3)).reason, 'cap'); assert.equal(calls, 2);
   } finally { globalThis.fetch = real; }
-});
-
-test('train answers once the timetable table has rows', async () => {
-  const env = { DB: fakeD1() };
-  env.DB.raw.exec("INSERT INTO rail VALUES ('tlv',150,168,'0123456'),('tlv',180,198,'0123456'),('tlv',200,218,'6')");
-  assert.deepEqual(await (await call(env, 'GET', '/api/train?from=tlv&by=199&dow=1')).json(), { available: true, dep: 180, arr: 198 });
 });
 
 test('flight rows are mapped and bad rows dropped', () => {
@@ -187,4 +181,25 @@ test('map lookup reads both providers, and a Google Maps link gives the pin', ()
   assert.deepEqual(parseMapLink('https://www.google.com/maps/place/X/@47.49,19.05,17z/data=!3m1!4b1!4m6!3m5!1s0x0:0x0!8m2!3d47.4983!4d19.0571'), { la: 47.4983, lo: 19.0571 });
   assert.deepEqual(parseMapLink('https://www.google.com/maps/@47.49,19.05,17z'), { la: 47.49, lo: 19.05 });
   assert.equal(parseMapLink('https://www.google.com/maps/place/X'), null);
+});
+
+test('the train answer is the first and last rail step, in Israel time', () => {
+  const st = (dep, arr, type, a, b) => ({ transitDetails: { stopDetails: { departureTime: dep, arrivalTime: arr, departureStop: { name: a }, arrivalStop: { name: b } }, transitLine: { vehicle: { type } } } });
+  const j = { routes: [{ legs: [{ steps: [{}, st('2026-11-15T04:10:00Z', '2026-11-15T04:30:00Z', 'BUS', 'x', 'y'), st('2026-11-15T05:00:00Z', '2026-11-15T05:40:00Z', 'HEAVY_RAIL', 'חיפה', 'תל אביב'), st('2026-11-15T05:50:00Z', '2026-11-15T06:05:00Z', 'HEAVY_RAIL', 'תל אביב', 'נתב״ג')] }] }] };
+  const t = mapTrain(j);
+  assert.equal(t.dep, 7 * 60); assert.equal(t.arr, 8 * 60 + 5); assert.equal(t.from, 'חיפה'); assert.equal(t.changes, 1); assert.equal(t.bus, true);
+  assert.equal(mapTrain({ routes: [{ legs: [{ steps: [st('2026-11-15T04:10:00Z', '2026-11-15T04:30:00Z', 'BUS', 'x', 'y')] }] }] }), null);
+});
+test('weather keeps one entry per day and marks the kind', () => {
+  const w = mapWeather({ daily: { time: ['a', 'b'], temperature_2m_max: [24.6, 20], temperature_2m_min: [15.2, null], precipitation_probability_max: [70, 10], precipitation_sum: [3.2, 0] } }, 'forecast');
+  assert.deepEqual(w.days[0], { hi: 25, lo: 15, rain: 70, mm: 3 }); assert.equal(w.days[1].lo, null);
+  assert.equal(mapWeather({ daily: { time: ['a'], temperature_2m_max: [1], temperature_2m_min: [0], precipitation_sum: [0] } }, 'lastyear').days[0].rain, null);
+});
+test('a shared trip key replaces the device only when it is long enough', () => {
+  const rq = (h) => new Request('https://x/api/trip', { headers: h });
+  const dev = '11111111-1111-4111-8111-111111111111';
+  assert.equal(tripKey(rq({ 'x-device': dev })), dev);
+  assert.equal(tripKey(rq({ 'x-device': dev, 'x-trip': 'short' })), dev);
+  assert.equal(tripKey(rq({ 'x-device': dev, 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), 't:abcdefghijklmnopqrstuvwxyz012345');
+  assert.equal(tripKey(rq({ 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), '');
 });
