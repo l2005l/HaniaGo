@@ -229,13 +229,19 @@ export function mapPlaces(list) {
 }
 async function getPlaces(req, env, url) {
   const q = str(url.searchParams.get('q'), 40).toLowerCase(); if (q.length < 2) return json({ places: [] });
-  const hit = await cacheGet(env, 'pl:' + q); if (hit) return json(hit);
+  const hit = await cacheGet(env, 'pl2:' + q); if (hit) return json(hit);
+  const ask = async (locale) => {
+    const r = await fetch('https://autocomplete.travelpayouts.com/places2?' + new URLSearchParams([['term', q], ['locale', locale], ['types[]', 'city']]), { headers: { accept: 'application/json' } });
+    const text = await r.text(); let list = null; try { list = JSON.parse(text); } catch {}
+    return { status: r.status, text, places: mapPlaces(list) };
+  };
   try {
-    const r = await fetch('https://autocomplete.travelpayouts.com/places2?locale=he&types[]=city&term=' + encodeURIComponent(q));
-    const out = { places: mapPlaces(await r.json()) };
-    if (r.ok) await cachePut(env, 'pl:' + q, out, 30 * DAY);
+    let a = await ask('he'); if (!a.places.length) a = await ask('en');
+    if (url.searchParams.get('debug') === '1') return json({ status: a.status, sample: a.text.slice(0, 500) });
+    const out = { places: a.places };
+    if (out.places.length) await cachePut(env, 'pl2:' + q, out, 30 * DAY);
     return json(out);
-  } catch { return json({ places: [] }); }
+  } catch (e) { return json({ places: [], error: url.searchParams.get('debug') === '1' ? String(e) : undefined }); }
 }
 
 /* ---- benefits from הנחה בכיס ---- */
