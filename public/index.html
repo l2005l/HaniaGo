@@ -88,6 +88,17 @@ nav button.on{background:var(--sea-soft);color:var(--ink)}
       document.head.appendChild(script);
   })();
 </script>
+<script>
+  (function (s, t, a, y, twenty, two) {
+    s.Stay22 = s.Stay22 || {};
+    s.Stay22.params = { lmaID: '6aca87d8a271e168fb2854bf' };
+    twenty = t.createElement(a);
+    two = t.getElementsByTagName(a)[0];
+    twenty.async = 1;
+    twenty.src = y;
+    two.parentNode.insertBefore(twenty, two);
+  })(window, document, 'script', 'https://lma.stay22.com/letmeallez.js');
+</script>
 </head>
 <body>
 <div class="wrap" dir="rtl" lang="he">
@@ -318,7 +329,7 @@ function tiqetsUrl(s,d){var u='https://www.tiqets.com/en/search?q='+encodeURICom
 function gygUrl(n,d){return 'https://www.getyourguide.com/s/?q='+encodeURIComponent(n+' '+enName(d))+(AFF.gyg?'&partner_id='+AFF.gyg:'')}
 function skyUrl(d){var f=function(s){return s.slice(2).replace(/-/g,'')};
  return 'https://www.skyscanner.co.il/transport/flights/tlv/'+String(d.code).toLowerCase()+'/'+f(S.date)+'/'+f(addDays(S.date,nights()))+'/?adults='+Math.max(1,pax().a)+(AFF.sky?'&associateid='+AFF.sky:'')}
-function pLink(p,url,label){return '<a class="btn pri" data-partner="'+p+'" target="_blank" rel="noopener" href="'+esc(url)+'">'+label+'</a><p class="note">קישור לאתר שותף. אחרי הגדרת מזהה שותפים, HaniaGo תקבל עמלה על הזמנה.</p>'}
+function pLink(p,url,label){return '<a class="btn pri" data-partner="'+p+'" target="_blank" rel="noopener" href="'+esc(url)+'">'+label+'</a><p class="note">קישור שותפים: HaniaGo עשויה לקבל עמלה על הזמנה, והמחיר שלכם לא משתנה.</p>'}
 function famHasAge(lo,hi){if(lo==null&&hi==null)return true;return S.fam.some(function(m){var g=+m.a||0;return (lo==null||g>=lo)&&(hi==null||g<=hi)})}
 function tipsFor(dest,place){var now=Date.now(),g={};
  REPORTS.forEach(function(r){if(r.dest!==dest||r.place!==place||APPROVED[r.id]==='no')return;if(now-(+r.ts||0)>365*864e5)return;
