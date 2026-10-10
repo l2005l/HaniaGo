@@ -229,7 +229,7 @@ function vFlight0(){var d=D();if(!d.abroad)return '<h2>טיסה</h2><div class="
  +(l.length?l.map(function(f){var on=f.i===+S.flight;return '<div class="card"><div class="sp"><span class="big">'+f.dep+'</span><span class="big">'+nis(f.price)+'</span></div><div class="sp"><span>'+f.air+' · '+durTxt(f.dur)+' <span class="tag">'+(f.stop?'עצירה אחת':'ישירה')+'</span></span><span class="note">לנוסע</span></div><div class="sp"><span class="note">סה״כ למשפחה '+nis(f.price*(p.a+p.c)+f.price*.1*p.inf)+'</span><button data-pick="'+f.i+'" class="'+(on?'on':'')+'">'+(on?'נבחרה':'בחירה')+'</button></div></div>'}).join(''):'<div class="card"><p>אין טיסה שמתאימה לסינון. נסו להרחיב את שעות ההמראה.</p></div>')
  +'<div class="card"><h3>הכרטיס שלכם</h3><p class="note">לא חובה. נשמר רק בדפדפן הזה.</p><div class="row"><label class="grow" for="tno">מספר טיסה<input id="tno" data-f="ticketNo" value="'+esc(S.ticketNo)+'" placeholder="LY385"></label><label class="grow" for="tcode">קוד הזמנה<input id="tcode" data-f="ticketCode" value="'+esc(S.ticketCode)+'" placeholder="ABC123"></label></div></div>'
  +'<button class="pri" data-go="leave">המשך ליציאה מהבית</button>'}
-function vLeave0(){var d=D(),h=HOME[S.home]||HOME.tlv,car=S.mode==='car',html='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+seg('mode',[['car','ברכב'],['train',d.abroad?'ברכבת':'בתחבורה ציבורית']])+'</div>';
+function vLeave0(){var d=D(),h=HOME[S.home]||HOME.tlv,car=S.mode==='car',html='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+homeIn()+seg('mode',[['car','ברכב'],['train',d.abroad?'ברכבת':'בתחבורה ציבורית']])+'</div>';
  if(d.abroad){var f=flights()[S.flight]||flights()[0],dep=mins(f.dep),atAir=dep-180,trav=car?h[1]:h[2],out=atAir-trav-15;
   html+='<div class="card"><div class="sp"><span>יוצאים מהבית ב</span><span class="big">'+hm(out)+'</span></div>'+(out<0?'<p class="note">שימו לב: זה בלילה שלפני יום הטיסה.</p>':'')
   +'<div class="tl"><p><b class="num">'+hm(out)+'</b> יציאה מ'+h[0]+(car?' ברכב, כ-'+trav+' דק׳ נסיעה':' לתחנת הרכבת')+'</p><p><b class="num">'+hm(atAir)+'</b> בנתב״ג, 3 שעות לפני ההמראה</p><p><b class="num">'+f.dep+'</b> המראה ל'+esc(d.n)+(S.ticketNo?' · '+esc(S.ticketNo):'')+'</p><p><b class="num">'+hm(dep+f.dur)+'</b> נחיתה, שעון ישראל</p></div>'
@@ -397,7 +397,7 @@ var dbT=null,dbLast='',dbBusy=false;
 function queueDb(){if(!CAP.db||!CAP.uid)return;clearTimeout(dbT);dbT=setTimeout(async function(){var c=JSON.parse(JSON.stringify(S));c.fam.forEach(function(m){m.n=''});c.ticketNo='';c.famName='';c.ticketCode='';var j=JSON.stringify(c);if(j===dbLast||dbBusy)return;dbBusy=true;try{await CAP.db.collection('data/users/'+CAP.uid).doc('trip').set({state:j,ts:Date.now()});dbLast=j}catch(e){}dbBusy=false},1500)}
 function flights(){var d=D(),o={i:0,dep:S.fDep||'--:--',price:+S.fPrice||0,stop:0,dur:d.dur||180,air:''};return [o,o,o,o,o]}
 function skyUrl(d){var f=function(s){return s.slice(2).replace(/-/g,'')};
- return 'https://www.skyscanner.co.il/transport/flights/tlv/'+String(d.code).toLowerCase()+'/'+f(S.date)+'/'+f(addDays(S.date,nights()))+'/?adults='+Math.max(1,pax().a)+(S.direct?'&preferdirects=true':'')+'&locale=he-IL&market=IL&currency=ILS'+(AFF.sky?'&associateid='+AFF.sky:'')}
+ return 'https://www.skyscanner.co.il/transport/flights/tlv/'+String(d.code).toLowerCase()+'/'+f(S.date)+'/'+f(addDays(S.date,nights()))+'/?'+skyPax()+(S.direct?'&preferdirects=true':'')+'&locale=he-IL&market=IL&currency=ILS'+(AFF.sky?'&associateid='+AFF.sky:'')}
 function vFlight(){var d=D();if(!d.abroad)return vFlight0();var p=pax();
  var h='<h2>טיסה ל'+esc(d.n)+'</h2><div class="card"><h3>חיפוש טיסה</h3><p class="note">מחירים וזמנים אמיתיים מוצגים ב-Skyscanner, עם היעד והתאריכים שלכם. שם ממיינים לפי הזול או המהיר. את מספר הילדים מעדכנים שם.</p><label class="chk" for="direct"><input id="direct" type="checkbox" data-f="direct"'+(S.direct?' checked':'')+'>טיסות ישירות בלבד</label>'
   +(d.code?pLink('sky',skyUrl(d),'חיפוש טיסות ב-Skyscanner'):'<p class="err">ליעד הזה אין קוד שדה תעופה, ולכן אין קישור חיפוש מוכן.</p>')+'</div>';
@@ -409,7 +409,7 @@ function dayPart(m){m=((m%1440)+1440)%1440;return m<300?'בלילה':m<720?'בב
 function leavePlan(){var d=D(),h=HOME[S.home]||HOME.tlv;if(!d.abroad||!S.fDep)return null;
  var dep=mins(S.fDep),air=dep-180,car=S.mode==='car',st=[],out;
  if(car){var tv=+S.wazeMin>0?Math.round(+S.wazeMin):h[1];out=air-25-tv;
-  st.push([out,'יוצאים מהבית ברכב','כ-'+tv+' דק׳ נסיעה מ'+h[0]+(+S.wazeMin>0?', לפי Waze':', הערכה בלי פקקים')]);
+  st.push([out,'יוצאים מהבית ברכב','כ-'+tv+' דק׳ נסיעה מ'+(homeNm()||h[0])+(+S.wazeMin>0?', לפי Waze':', הערכה בלי פקקים')]);
   st.push([out+tv,'חניון נתב״ג','חניה והסעה לטרמינל, כ-25 דק׳'])}
  else{var ride=h[2],td=air-ride-5;out=td-30;
   st.push([out,'יוצאים מהבית לתחנת הרכבת','כ-20 דק׳ עד התחנה ב'+h[0]]);
@@ -423,7 +423,7 @@ function leavePlan(){var d=D(),h=HOME[S.home]||HOME.tlv;if(!d.abroad||!S.fDep)re
  st.push([dep,'המראה ל'+d.n,S.ticketNo||'']);
  return{out:out,steps:st,car:car}}
 function vLeave(){var d=D();if(!d.abroad)return vLeave0();
- var h='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+seg('mode',[['car','ברכב'],['train','ברכבת']])+'</div>',lp=leavePlan();
+ var h='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+homeIn()+seg('mode',[['car','ברכב'],['train','ברכבת']])+'</div>',lp=leavePlan();
  if(!lp)return h+'<div class="card"><p>כדי לחשב מתי לצאת צריך את שעת ההמראה. הזינו אותה במסך הטיסה.</p><button class="pri" data-go="flight">למסך הטיסה</button></div>';
  h+='<div class="card"><div class="sp"><span>יוצאים מהבית '+dayPart(lp.out)+'</span><span class="big">'+hm(lp.out)+'</span></div>'+(lp.out<0?'<p class="note">שימו לב: זה בלילה שלפני יום הטיסה.</p>':'')
   +'<div class="tl">'+lp.steps.map(function(s){return '<p><b class="num">'+hm(s[0])+'</b> '+esc(s[1])+(s[2]?'<br><span class="note">'+esc(s[2])+'</span>':'')+'</p>'}).join('')+'</div></div>';
@@ -524,15 +524,17 @@ function vFlight(){var d=D();if(!d.abroad)return vFlight0();var p=pax();loadFlig
   +'<div class="row"><label class="grow" for="tno">מספר טיסה<input id="tno" data-f="ticketNo" value="'+esc(S.ticketNo)+'" placeholder="LY385"></label><label class="grow" for="tcode">קוד הזמנה<input id="tcode" data-f="ticketCode" value="'+esc(S.ticketCode)+'" placeholder="ABC123"></label></div>'
   +(+S.fPrice>0?'<p>סה״כ למשפחה: <b class="num">'+nis(S.fPrice*(p.a+p.c)+S.fPrice*.1*p.inf)+'</b></p>':'')+'<p class="note">מספר הטיסה וקוד ההזמנה נשמרים רק במכשיר הזה.</p></div>';
  return h+'<button class="pri" data-go="leave">המשך ליציאה מהבית</button>'}
-function loadDrive(){var xy=HOMEXY[S.home];if(!xy||S.mode!=='car'||!S.fDep||!D().abroad)return;
- var fl=new Date(S.date+'T'+S.fDep+':00').getTime(),soon=fl-Date.now()<36*3600e3,k=S.home+'|'+S.date+'|'+S.fDep+(soon?'|'+Math.floor(Date.now()/3600e3):'');if(RT.k===k)return;RT={k:k,st:'load'};
+function loadDrive(){var xy=HOMEXY[S.home],hn=homeNm();if((!xy&&!hn)||S.mode!=='car'||!S.fDep||!D().abroad)return;
+ var fl=new Date(S.date+'T'+S.fDep+':00').getTime(),soon=fl-Date.now()<36*3600e3,k=S.home+'|'+hn+'|'+S.date+'|'+S.fDep+(soon?'|'+Math.floor(Date.now()/3600e3):'');if(RT.k===k)return;RT={k:k,st:'load'};
  var dep=new Date(fl-(205+HOME[S.home][1])*60000);
- api('GET','/api/route?flat='+xy[0]+'&flng='+xy[1]+'&tlat=32.0004&tlng=34.8706&mode=drive&depart='+encodeURIComponent(dep.toISOString())).then(function(j){if(RT.k!==k)return;if(j.available){RT.st='ok';RT.at=j.checkedAt;S.wazeMin=j.minutes;render(1)}else{RT.st='off';soft()}}).catch(function(){if(RT.k===k){RT.st='off';soft()}})}
+ api('GET','/api/route?'+(xy?'flat='+xy[0]+'&flng='+xy[1]:'faddr='+encodeURIComponent(hn))+'&tlat=32.0004&tlng=34.8706&mode=drive&depart='+encodeURIComponent(dep.toISOString())).then(function(j){if(RT.k!==k)return;if(j.available){RT.st='ok';RT.at=j.checkedAt;S.wazeMin=j.minutes;render(1)}else{RT.st='off';soft()}}).catch(function(){if(RT.k===k){RT.st='off';soft()}})}
 function loadTrain(lp){if(S.mode==='car'||!HOMEXY[S.home])return;var by=lp.steps[3][0],k=S.home+'|'+S.date+'|'+by;if(TRN.k===k)return;TRN={k:k,r:null};
  var dow=new Date(S.date+'T12:00').getDay();if(by<0)dow=(dow+6)%7;
  api('GET','/api/train?from='+S.home+'&by='+(((by%1440)+1440)%1440)+'&dow='+dow).then(function(j){if(TRN.k===k){TRN.r=j;soft()}}).catch(function(){})}
+function homeIn(){return S.home==='other'?'<label for="hmn">שם העיר או היישוב<input id="hmn" data-f="homeName" value="'+esc(S.homeName||'')+'" placeholder="עפולה"></label>':''}
+function homeNm(){return S.home==='other'&&(S.homeName||'').trim()?S.homeName.trim().slice(0,60):''}
 function vLeave(){var d=D();if(!d.abroad)return vLeave0();loadDrive();
- var h='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+seg('mode',[['car','ברכב'],['train','ברכבת']])+'</div>',lp=leavePlan();
+ var h='<h2>יציאה מהבית</h2><div class="card"><label for="home">מאיפה יוצאים<select id="home" data-f="home">'+Object.keys(HOME).map(function(k){return '<option value="'+k+'"'+(k===S.home?' selected':'')+'>'+HOME[k][0]+'</option>'}).join('')+'</select></label>'+homeIn()+seg('mode',[['car','ברכב'],['train','ברכבת']])+'</div>',lp=leavePlan();
  if(!lp)return h+'<div class="card"><p>כדי לחשב מתי לצאת צריך את שעת ההמראה. בחרו טיסה או הזינו אותה במסך הטיסה.</p><button class="pri" data-go="flight">למסך הטיסה</button></div>';
  loadTrain(lp);
  h+='<div class="card"><div class="sp"><span>יוצאים מהבית '+dayPart(lp.out)+'</span><span class="big">'+hm(lp.out)+'</span></div>'+(lp.out<0?'<p class="note">שימו לב: זה בלילה שלפני יום הטיסה.</p>':'')
@@ -559,6 +561,7 @@ function vCommunity(){var d=D(),h='<h2>קהילה וטיפים</h2>';
 var POP=[['לונדון','LON'],['פריז','PAR'],['ברצלונה','BCN'],['מדריד','MAD'],['אמסטרדם','AMS'],['ברלין','BER'],['פראג','PRG'],['וינה','VIE'],['מילאנו','MIL'],['ליסבון','LIS'],['לרנקה','LCA'],['פאפוס','PFO'],['רודוס','RHO'],['כרתים','HER'],['סלוניקי','SKG'],['בוקרשט','BUH'],['סופיה','SOF'],['ורנה','VAR'],['ורשה','WAW'],['קרקוב','KRK'],['ציריך','ZRH'],['בטומי','BUS'],['טביליסי','TBS'],['דובאי','DXB'],['אבו דאבי','AUH'],['בנגקוק','BKK'],['ניו יורק','NYC']];
 var PLACES=[],plT=null,TPM='583460';
 var ILP=['תל אביב-יפו','חיפה','עכו','נהריה וראש הנקרה','צפת','רמת הגולן','עמק החולה','נצרת','זכרון יעקב וקיסריה','נתניה','ים המלח','מצפה רמון','באר שבע','אשקלון','ערד ומצדה','בית שאן ועמק המעיינות'];
+function skyPax(){var ad=0,ch=[];S.fam.forEach(function(m){var g=+m.a||0;if(g<16)ch.push(g);else ad++});ad=Math.max(1,ad);return 'adults='+ad+'&adultsv2='+ad+(ch.length?'&childrenv2='+ch.join('%7C'):'')}
 function aviaUrl(d){var f=function(s){return s.slice(8,10)+s.slice(5,7)},p=pax(),px=String(Math.max(1,p.a))+((p.c||p.inf)?String(p.c):'')+(p.inf?String(p.inf):'');return 'https://www.aviasales.com/search/TLV'+f(S.date)+String(d.code).toUpperCase()+f(addDays(S.date,nights()))+px+'?marker='+TPM+'&locale=he&currency=ils'}
 function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)return;el.innerHTML=PLACES.slice(0,6).map(function(p,i){return '<button data-act="placepick" data-i="'+i+'" style="justify-content:space-between;gap:8px"><span>'+esc(p.name)+'</span><span class="note">'+(p.code?esc(p.country)+' · '+esc(p.code):'ישראל')+'</span></button>'}).join('')}
 function vFamily(){var ab=S.abroad;
@@ -569,13 +572,14 @@ function vFamily(){var ab=S.abroad;
   +'<h3>יעדים פופולריים</h3><div class="row">'+(ab?POP.map(function(p,i){return '<button data-act="poppick" data-i="'+i+'">'+p[0]+'</button>'}):ILP.map(function(n,i){return '<button data-act="ilpick" data-i="'+i+'">'+n+'</button>'})).join('')+'</div></div>';
  var endL='<label class="grow" for="end">תאריך חזרה · '+nights()+' לילות<input id="end" type="date" data-end="1" min="'+esc(addDays(S.date,1))+'" max="'+esc(addDays(S.date,14))+'" value="'+esc(addDays(S.date,nights()))+'"></label>';
  return vFamily0().replace(/<label class="grow" for="nights">[\s\S]*?<\/label>/,function(){return endL}).replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>בני המשפחה</h3>',function(m){return card+m})}
-async function mkDest(h){if(S.busy)return;var q=((h&&h.name)||S.newDest||'').trim().slice(0,60);
+function thin(k){var x=DEST[k];return !!(x&&x.ai&&S.custom[k]&&!x.v)}
+async function mkDest(h){if(S.busy)return;var old='',q=((h&&h.name)||S.newDest||'').trim().slice(0,60);
  if(!q){S.err2='כתבו שם של יעד.';return render(1)}
- if(!S.abroad||(h&&h.il)){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv){S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
- if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
+ if(!S.abroad||(h&&h.il)){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv&&thin(hv))old=hv;else if(hv){S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
+ if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have&&thin(have))old=have;else if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
  S.busy=true;S.building=q;S.err2='';render(1);
  try{var body={q:q};if(h&&h.il)body.il=true;if(h&&h.code)body.code=h.code;if(h&&h.la!=null){body.la=h.la;body.lo=h.lo}
-  var j=await api('POST','/api/dest',body),dd=j.dest,k='c_'+Date.now();S.custom[k]=dd;DEST[k]=dd;S.abroad=!!dd.abroad;S.dest=k;S.sel={};S.newDest='';S.fDep='';S.fPrice='';S.ticketNo='';PLACES=[]}
+  var j=await api('POST','/api/dest',body),dd=j.dest,k=old||'c_'+Date.now();S.custom[k]=dd;DEST[k]=dd;S.abroad=!!dd.abroad;S.dest=k;S.sel={};S.newDest='';S.fDep='';S.fPrice='';S.ticketNo='';PLACES=[]}
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
  S.busy=false;S.building='';render(1)}
 function custList(i){return (S.custDest===S.dest&&S.cust&&S.cust[i])||[]}
