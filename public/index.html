@@ -269,13 +269,13 @@ function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d
 function tlCost(it){return it.reduce(function(s,x){return s+x.cost},0)}
 function vPlan(){var d=D(),days=dayOptions(),p=pax();
  var html='<h2>המסלול ב'+esc(d.n)+'</h2><p class="note">לכל יום יש כמה מסלולים שמותאמים לגילאים שהזנתם. המסלול שנבחר נפתח כיום מלא, מהבוקר עד החזרה למלון. זמני נסיעה ומחירים הם הערכה לדוגמה.</p>'
- +'<div class="card"><div class="ph">תמונה של המלון</div><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>'+myHotelCard(d)+extras(d);
+ +'<div class="card"><div class="ph">תמונה של המלון</div><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',bookingUrl(d),'הזמנת מלון ב-Booking'))+'</div>'+myHotelCard(d)+minePlanCard(d)+extras(d);
  days.forEach(function(day,i){html+='<h3>'+dayLabel(i)+(i===0?' · הגעה':i===days.length-1?' · חזרה':'')+'</h3>';
   day.opts.forEach(function(o){var on=o.k===day.sel,it=timeline(i,o.stops),tot=tlCost(it);
    html+='<div class="card'+(on?' sel':'')+'"><div class="sp"><h3>'+o.name+'</h3>'+(o.fit!==null?'<span class="tag">התאמה למשפחה '+o.fit+'%</span>':'')+'</div><p class="note">'+esc(o.why)+'</p>';
    if(!on&&o.stops.length)html+='<p>'+o.stops.map(function(s){return esc(s.n)}).join(' · ')+'</p>'
     +(o.stops.some(function(s){return WARN[s.n]})?'<p class="warn">יש אזהרות מהרשת על המסלול הזה</p>':'');
-   if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)it.forEach(function(x){var s=x.stop;
+   if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)html+=foodBtns(o.stops,d);if(on)it.forEach(function(x){var s=x.stop;
     html+='<div class="stop"><div class="sp"><b><span class="num">'+hm(x.t)+'</span> '+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
     if(s)html+='<div class="ph">תמונה של '+esc(s.n)+'</div><div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')
@@ -342,7 +342,7 @@ function tipsFor(dest,place){var now=Date.now(),g={};
   var k=r.kind+'|'+r.topic,o=g[k]||(g[k]={kind:r.kind,uids:{},ok:false,mine:false,last:r});
   o.uids[r.uid]=1;if(APPROVED[r.id]==='yes')o.ok=true;if(r.uid===CAP.uid)o.mine=true;if((+r.ts||0)>(+o.last.ts||0))o.last=r});
  return Object.keys(g).map(function(k){var o=g[k];o.cnt=Object.keys(o.uids).length;o.ver=o.ok||o.cnt>=2;return o}).filter(function(o){return (o.ver||o.mine||CAP.owner)&&famHasAge(o.last.minAge,o.last.maxAge)})}
-function tipsHtml(s,d){var h='';if(s.own)return '<p class="note">עצירה שהוספתם בעצמכם.</p>';
+function tipsHtml(s,d){var h='';if(s.own||s.mine)return (s.pn&&s.pn.note?'<p class="'+(s.pn.warn?'err':'note')+'">'+(s.pn.warn?'שימו לב: ':'')+esc(s.pn.note)+' <span class="note">· הערת בינה מלאכותית, לא אומתה</span></p>':'')+'<p class="note">עצירה שהוספתם בעצמכם. '+esc(s.rec||'')+'</p>';
  if(s.ai)h+='<p><b>טיפ:</b> '+esc(s.rec)+' <span class="note">· נכתב על ידי בינה מלאכותית, לא אומת</span></p>';
  else{h+='<p><b>טיפ:</b> '+esc(s.rec)+' <span class="note">· '+src(s.n+'x')+' (דוגמה)</span></p>';
   if(WARN[s.n])h+='<p class="warn"><b>אזהרה:</b> '+esc(WARN[s.n])+' <span class="note">· '+src(s.n)+' (דוגמה)</span></p>'}
@@ -589,6 +589,36 @@ async function mkDest(h){if(S.busy)return;var old='',q=((h&&h.name)||S.newDest||
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
  S.busy=false;S.building='';render(1)}
 var GEO={};
+function foodBtns(st,d){var c=st.filter(function(x){return !x.own})[0]||d.hotel,u=function(q){return 'https://www.google.com/maps/search/'+encodeURIComponent(q)+'/@'+c.la+','+c.lo+',14z?hl=iw'},b=function(q,l){return '<a class="btn grow" target="_blank" rel="noopener" href="'+esc(u(q))+'">'+l+'</a>'};
+ return '<div class="row">'+b(d.abroad?'kosher restaurant':'מסעדה כשרה','מסעדות כשרות ליד')+b(d.abroad?'family friendly restaurant':'מסעדה למשפחות','מסעדות למשפחות ליד')+'</div><p class="note">נפתח ב-Google Maps סביב העצירות של היום. את תעודת הכשרות כדאי לוודא מול המסעדה.</p>'}
+function planNames(){var seen={},out=[];String(S.planTxt||'').split(/[\n,;]+/).forEach(function(x){x=x.replace(/^[\s\d.\-*•)]+/,'').trim().slice(0,60);if(x&&!seen[x]){seen[x]=1;out.push(x)}});return out.slice(0,24)}
+function minePlanCard(d){var r=S.planRes&&S.planRes.dest===S.dest?S.planRes:null;
+ var h='<div class="card"><h3>התכנון שלי</h3><p class="note">כתבו את כל המקומות שאתם רוצים להגיע אליהם, כל מקום בשורה. האתר מאתר אותם במפה, מעיר על התאמה לגילים ולעונה, ומחלק אותם לימים לפי קרבה, עם ניווט מוכן לכל יום.</p><label for="pt">המקומות שלכם<textarea id="pt" data-live="planTxt" rows="5" placeholder="הקולוסיאום&#10;גן החיות&#10;שוק קמפו דה פיורי">'+esc(S.planTxt||'')+'</textarea></label>'+(S.planMsg?'<p class="err" role="alert">'+esc(S.planMsg)+'</p>':'')+'<button class="pri" data-act="planmine">'+(S.planBusy?esc(S.planBusy):'סידור המקומות לפי ימים')+'</button>';
+ if(r){h+='<p><b>'+r.placed+' מקומות סודרו ב-'+r.days+' ימים.</b>'+(r.left.length?' לא נכנסו: '+esc(r.left.join(', '))+'.':'')+(r.miss.length?' לא זוהו במפה, ולכן שובצו בלי חישוב מרחק: '+esc(r.miss.join(', '))+'.':'')+'</p>';
+  var ws=r.notes.filter(function(x){return x.note});if(ws.length)h+='<div class="stop"><b>הערות על המקומות</b>'+ws.map(function(x){return '<p class="'+(x.warn?'err':'note')+'">'+(x.warn?'שימו לב, ':'')+esc(x.n)+': '+esc(x.note)+'</p>'}).join('')+'<p class="note">ההערות נכתבו בבינה מלאכותית ולא אומתו. בדקו שעות ומגבלות גיל מול המקום.</p></div>';
+  h+='<p class="note">הימים מופיעים למטה כ״מסלול משלי״, ואפשר לשנות בכל יום את הסדר ואת העצירות.</p>'}
+ return h+'</div>'}
+function splitDays(pts,hotel,n){var caps=[],i,mid=[],edge=[],days=[];for(i=0;i<n;i++){days.push([]);if(n>2&&(i===0||i===n-1))edge.push(i);else mid.push(i)}
+ var per=Math.min(6,Math.max(2,Math.ceil((pts.length-edge.length)/Math.max(1,mid.length))));for(i=0;i<n;i++)caps.push(edge.indexOf(i)>=0?1:per);
+ var geoP=pts.filter(function(x){return x.la!=null}),rest=pts.filter(function(x){return x.la==null}),near=function(a,list){var b=0;list.forEach(function(x,j){if(km(a,x)<km(a,list[b]))b=j});return b};
+ mid.forEach(function(di){if(!geoP.length)return;var far=0;geoP.forEach(function(x,j){if(km(hotel,x)>km(hotel,geoP[far]))far=j});var seed=geoP.splice(far,1)[0],g=[seed];while(g.length<caps[di]&&geoP.length)g.push(geoP.splice(near(seed,geoP),1)[0]);
+  var cur=hotel,ord=[];while(g.length){var j=near(cur,g);cur=g[j];ord.push(g.splice(j,1)[0])}days[di]=ord});
+ edge.forEach(function(di){if(geoP.length)days[di].push(geoP.splice(near(hotel,geoP),1)[0])});
+ rest.concat(geoP).forEach(function(x){var b=-1;for(var j=0;j<n;j++)if(days[j].length<(edge.indexOf(j)>=0?1:6)&&(b<0||days[j].length<days[b].length)&&edge.indexOf(j)<0)b=j;if(b<0)for(j=0;j<n;j++)if(days[j].length<1)b=j;if(b>=0)days[b].push(x);else x.left=1});
+ return days}
+async function planMine(){if(S.planBusy)return;var names=planNames(),d=D();if(!names.length){S.planMsg='כתבו לפחות מקום אחד.';return render(1)}
+ S.planMsg='';S.planBusy='מאתר את המקומות במפה…';render(1);S.own=S.own||{};
+ try{var pts=[];for(var i=0;i<names.length;i+=4)await Promise.all(names.slice(i,i+4).map(async function(n){var a=d.at.filter(function(x){return x.n===n})[0],p={n:n};
+    if(a){p.la=a.la;p.lo=a.lo}else{var k=S.dest+'|'+n,g=S.own[k];if(!g||g.miss){try{var j=await geo(n,d);g=S.own[k]=j&&j.found?{la:j.la,lo:j.lo,label:j.label}:{miss:1}}catch(e){g={miss:1}}}if(g&&!g.miss){p.la=g.la;p.lo=g.lo}}pts.push(p)}));
+  pts.sort(function(a,b){return names.indexOf(a.n)-names.indexOf(b.n)});
+  S.planBusy='בודק התאמה לגילים ולעונה…';render(1);var notes=[];
+  try{var nj=await api('POST','/api/notes',{dest:d.n,month:+S.date.slice(5,7),ages:S.fam.map(function(m){return +m.a||0}),names:names});notes=nj.notes||[]}catch(e){}
+  S.pnote=S.pnote||{};notes.forEach(function(x){S.pnote[S.dest+'|'+x.n]={note:x.note,warn:x.warn}});
+  var n=nights()+1,days=splitDays(pts,d.hotel,n);S.cust={};S.custDest=S.dest;S.sel=S.sel||{};var used=0,placed=0;
+  days.forEach(function(l,di){if(l.length){S.cust[di]=l.map(function(x){return x.n});S.sel[di]='custom';used++;placed+=l.length}else if(S.sel[di]==='custom')delete S.sel[di]});
+  S.planRes={dest:S.dest,placed:placed,days:used,left:pts.filter(function(x){return x.left}).map(function(x){return x.n}),miss:pts.filter(function(x){return x.la==null&&!x.left}).map(function(x){return x.n}),notes:notes}}
+ catch(e){S.planMsg='הסידור נכשל הפעם. נסו שוב בעוד רגע.'}
+ S.planBusy='';render(1)}
 function geo(q,d){return api('GET','/api/geo?q='+encodeURIComponent(q+' '+d.n)+'&la='+DEST[S.dest].hotel.la+'&lo='+DEST[S.dest].hotel.lo)}
 function myHotelCard(d){var m=d.hotel.mine?S.myHotel:null;
  return '<div class="card"><h3>'+(m?'המלון שלכם':'כבר הזמנתם מלון?')+'</h3>'+(m?'<p>'+esc(m.n)+'<br><span class="note">'+esc(m.label||'')+'</span></p><p class="note">כל המסלולים, המפות והניווט יוצאים וחוזרים למלון הזה.</p><button data-act="myhoteldel">חזרה למלון המוצע</button>'
@@ -597,7 +627,7 @@ function setMyHotel(){var n=(S.mhName||'').trim().slice(0,80),d=D();if(!n||S.mhB
  geo(n,d).then(function(j){S.mhBusy=false;if(j&&j.found){S.myHotel={dest:S.dest,n:n,la:j.la,lo:j.lo,label:j.label,p:+S.mhPrice||0};S.mhName='';S.mhPrice=''}else S.mhMsg='לא מצאתי את המקום במפה. נסו שם מלא באנגלית, או רחוב ומספר.';render(1)}).catch(function(){S.mhBusy=false;S.mhMsg='החיפוש במפה לא זמין כרגע. נסו שוב בעוד רגע.';render(1)})}
 function ownGeo(n){var d=D(),k=S.dest+'|'+n;S.own=S.own||{};if(S.own[k]||GEO[k])return;GEO[k]=1;geo(n,d).then(function(j){S.own[k]=j&&j.found?{la:j.la,lo:j.lo,label:j.label}:{miss:1};render(1)}).catch(function(){delete GEO[k]})}
 function custList(i){return (S.custDest===S.dest&&S.cust&&S.cust[i])||[]}
-function custStops(i){var d=D(),y=youngest();return custList(i).map(function(n){var a=d.at.filter(function(x){return x.n===n})[0];if(a)return Object.assign({},a,{small:y<a.min});var g=(S.own||{})[S.dest+'|'+n];if(!g)ownGeo(n);var hit=g&&!g.miss;return {n:n,own:!hit,la:hit?g.la:d.hotel.la,lo:hit?g.lo:d.hotel.lo,who:'all',min:0,a:0,c:0,rec:hit?'זוהה במפה: '+g.label:g?'לא זוהה במפה, הניווט נפתח לפי השם':'מחפש במפה…'}})}
+function custStops(i){var d=D(),y=youngest();return custList(i).map(function(n){var a=d.at.filter(function(x){return x.n===n})[0];if(a)return Object.assign({},a,{small:y<a.min});var g=(S.own||{})[S.dest+'|'+n];if(!g)ownGeo(n);var hit=g&&!g.miss;var pn=(S.pnote||{})[S.dest+'|'+n];return {n:n,own:!hit,mine:true,pn:pn,la:hit?g.la:d.hotel.la,lo:hit?g.lo:d.hotel.lo,who:'all',min:0,a:0,c:0,rec:hit?'זוהה במפה: '+g.label:g?'לא זוהה במפה, הניווט נפתח לפי השם':'מחפש במפה…'}})}
 function custEditor(i,d){var l=custList(i),y=youngest(),mv=function(j,dir,lab,sym){return '<button class="x" style="color:inherit" data-act="cmv" data-day="'+i+'" data-j="'+j+'" data-dir="'+dir+'" aria-label="'+lab+'">'+sym+'</button>'};
  var h='<div class="stop"><b>העצירות שבחרתם</b>'+(l.length?l.map(function(n,j){return '<div class="sp" style="align-items:center"><span>'+(j+1)+'. '+esc(n)+'</span><span class="row" style="flex-wrap:nowrap">'+(j?mv(j,-1,'הזזה למעלה','↑'):'')+(j<l.length-1?mv(j,1,'הזזה למטה','↓'):'')+'<button class="x" data-act="cdel" data-day="'+i+'" data-j="'+j+'" aria-label="הסרת '+esc(n)+'">✕</button></span></div>'}).join(''):'<p class="note">עוד לא נבחרו עצירות. הוסיפו מהרשימה למטה, עד 6 ביום.</p>')+'</div>';
  var av=d.at.filter(function(x){return l.indexOf(x.n)<0});
@@ -637,6 +667,7 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='mkdest')mkDest(null);
  else if(act==='cadd')custEdit(b.dataset.day,function(l){if(l.length<6&&l.indexOf(b.dataset.n)<0)l.push(b.dataset.n)});
  else if(act==='myhotel')setMyHotel();
+ else if(act==='planmine')planMine();
  else if(act==='myhoteldel'){S.myHotel=null;render(1)}
  else if(act==='cdel')custEdit(b.dataset.day,function(l){l.splice(+b.dataset.j,1)});
  else if(act==='cmv')custEdit(b.dataset.day,function(l){var j=+b.dataset.j,k=j+ +b.dataset.dir;if(k>=0&&k<l.length){var x=l[j];l[j]=l[k];l[k]=x}});

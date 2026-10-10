@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -174,4 +174,14 @@ test('a destination asked for as Israeli is stored as domestic, whatever the mod
   const env = { DB: fakeD1(), AI: { run: async () => ({ response: JSON.stringify({ n: 'מצפה רמון', code: 'TLV', abroad: true, at }) }) } };
   const r = await (await call(env, 'POST', '/api/dest', { device: dev(1), body: { q: 'מצפה רמון', il: true } })).json();
   assert.deepEqual([r.dest.abroad, r.dest.code], [0, '']);
+});
+
+test('notes keep only the places that were asked about, and a warning needs a reason', () => {
+  const out = cleanNotes({ notes: [{ n: 'A', note: 'סגור בחורף', warn: true }, { n: 'B', note: '', warn: true }, { n: 'Z', note: 'x' }] }, ['A', 'B', 'C']);
+  assert.deepEqual(out, [{ n: 'A', note: 'סגור בחורף', warn: true }, { n: 'B', note: '', warn: false }, { n: 'C', note: '', warn: false }]);
+});
+test('map lookup reads both providers and rejects an empty answer', () => {
+  assert.equal(mapGeo([]), null);
+  assert.equal(mapGeo([{ lat: '41.9', lon: '12.49', display_name: 'Hotel' }]).la, 41.9);
+  assert.equal(mapGeo({ features: [{ geometry: { coordinates: [12.49, 41.9] }, properties: { name: 'H' } }] }, 'photon').lo, 12.49);
 });
