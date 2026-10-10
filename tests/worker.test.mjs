@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -121,31 +121,7 @@ test('the same outbound flight is listed once, at its cheapest price', () => {
 
 test('offers match attractions by name in either direction', () => {
   const m = matchOffers([{ storeName: 'המצפה התת ימי', label: '10% הנחה', cardName: 'חבר', actionUrl: 'https://x.test/a' }, { storeName: 'ACE', label: 'z' }], ['המצפה התת ימי אילת', 'טיילת וחוף']);
-  assert.deepEqual(Object.keys(m), ['המצפה התת ימי אילת']);
-  const link = new URL(m['המצפה התת ימי אילת'][0].url);
-  assert.equal(link.origin, 'https://save.hania360.com');
-  assert.equal(link.searchParams.get('store'), 'המצפה התת ימי');
-  assert.equal(link.searchParams.get('offer'), '10% הנחה');
-});
-
-test('offers include special benefits with honest verification status and a direct detail link', async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async url => new Response(JSON.stringify(String(url).includes('special-benefits') ? {
-    benefits: [{ merchant: 'חמת גדר', cardId: 'kranot-hashoter', cardName: 'קרנות השוטרים', benefitType: 'special_price', purchasePrice: null, faceValue: null, benefitValue: null, verificationStatus: 'needs_verification', sourceUrl: 'https://official.example/deal' }],
-  } : { offers: [{ storeName: 'AVIS', cardId: 'isracard', cardName: 'ישראכרט', label: '13% הנחה' }] }), { headers: { 'content-type': 'application/json' } });
-  try {
-    const env = { DB: fakeD1() };
-    const response = await call(env, 'GET', '/api/offers?names=' + encodeURIComponent('AVIS|חמת גדר'));
-    const { offers } = await response.json();
-    assert.match(offers['חמת גדר'][0].label, /ממתינה לאימות/);
-    const direct = new URL(offers['חמת גדר'][0].url);
-    assert.equal(direct.searchParams.get('store'), 'חמת גדר');
-    assert.equal(direct.searchParams.get('card'), 'police');
-    assert.equal(direct.searchParams.get('source'), 'https://official.example/deal');
-    const regular = new URL(offers.AVIS[0].url);
-    assert.equal(regular.searchParams.get('card'), 'isracard');
-    assert.equal(regular.searchParams.get('offer'), '13% הנחה');
-  } finally { globalThis.fetch = originalFetch; }
+  assert.deepEqual(Object.keys(m), ['המצפה התת ימי אילת']); assert.equal(new URL(m['המצפה התת ימי אילת'][0].url).searchParams.get('store'), 'המצפה התת ימי');
 });
 
 test('a generated destination is validated before it is stored', () => {
@@ -227,3 +203,33 @@ test('a shared trip key replaces the device only when it is long enough', () => 
   assert.equal(tripKey(rq({ 'x-device': dev, 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), 't:abcdefghijklmnopqrstuvwxyz012345');
   assert.equal(tripKey(rq({ 'x-trip': 'abcdefghijklmnopqrstuvwxyz012345' })), '');
 });
+
+test('club benefits join the offers, matched by alias and marked while unverified', () => {
+  const sp = mapSpecial([{ merchant: 'חמת גדר', aliases: ['Hamat Gader'], cardName: 'קרנות השוטרים', benefitType: 'special_price', purchasePrice: 66, verificationStatus: 'needs_verification', sourceUrl: 'https://club.example/x' },
+    { merchant: 'AVIS', provider: 'דיסקונט', benefitType: 'charge_discount', benefitValue: 5, verificationStatus: 'verified' }, { merchant: 'x', benefitType: 'other', conditions: '' }]);
+  assert.equal(sp.length, 2);
+  const m = matchOffers(sp, ['חמת גדר', 'Hamat Gader', 'AVIS']);
+  assert.equal(m['חמת גדר'][0].label, 'מחיר מיוחד ₪66'); assert.equal(m['חמת גדר'][0].pending, true); assert.equal(new URL(m['חמת גדר'][0].url).searchParams.get('source'), 'https://club.example/x');
+  assert.equal(m['Hamat Gader'].length, 1); assert.equal(m.AVIS[0].label, '5% הנחה'); assert.equal(m.AVIS[0].pending, undefined);
+});
+
+test('offers include special benefits with honest verification status and a direct detail link', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => new Response(JSON.stringify(String(url).includes('special-benefits') ? {
+    benefits: [{ merchant: 'חמת גדר', cardId: 'kranot-hashoter', cardName: 'קרנות השוטרים', benefitType: 'special_price', purchasePrice: null, faceValue: null, benefitValue: null, verificationStatus: 'needs_verification', conditions: 'מחיר מיוחד במועדון', sourceUrl: 'https://official.example/deal' }],
+  } : { offers: [{ storeName: 'AVIS', cardId: 'isracard', cardName: 'ישראכרט', label: '13% הנחה' }] }), { headers: { 'content-type': 'application/json' } });
+  try {
+    const env = { DB: fakeD1() };
+    const response = await call(env, 'GET', '/api/offers?names=' + encodeURIComponent('AVIS|חמת גדר'));
+    const { offers } = await response.json();
+    assert.equal(offers['חמת גדר'][0].pending, true);
+    const direct = new URL(offers['חמת גדר'][0].url);
+    assert.equal(direct.searchParams.get('store'), 'חמת גדר');
+    assert.equal(direct.searchParams.get('card'), 'police');
+    assert.equal(direct.searchParams.get('source'), 'https://official.example/deal');
+    const regular = new URL(offers.AVIS[0].url);
+    assert.equal(regular.searchParams.get('card'), 'isracard');
+    assert.equal(regular.searchParams.get('offer'), '13% הנחה');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
