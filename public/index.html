@@ -175,6 +175,7 @@ function dayOptions(){var pool=picks(),n=nights()+1,used={},days=[],times=['09:3
    var key=st.map(function(x){return x.n}).sort().join('|');if(!st.length||seen[key])return;seen[key]=1;
    var cost=0;st.forEach(function(s){if(!s.small)cost+=s.a*p.a+s.c*p.c});
    opts.push({k:d[0],name:d[1],stops:st,fit:fitOf(st),why:whyOf(st),cost:cost})});
+  var cs=custStops(i),cc=0;cs.forEach(function(x){if(!x.small)cc+=x.a*p.a+x.c*p.c});opts.push({k:'custom',name:'מסלול משלי',stops:cs,fit:fitOf(cs),why:cs.length?whyOf(cs):'בוחרים לבד את העצירות ואת הסדר, עם ההמלצות לצד כל מקום.',cost:cc});
   opts.push({k:'free',name:'יום חופשי',stops:[],fit:null,why:whyOf([]),cost:0});
   var sel=(S.sel||{})[i],ch=opts.filter(function(o){return o.k===sel})[0];
   if(!ch){ch=opts[0];opts.forEach(function(o){if(o.fit!==null&&(ch.fit===null||o.fit>=ch.fit))ch=o})}
@@ -232,7 +233,7 @@ function km(a,b){var r=Math.PI/180,x=(b.lo-a.lo)*r*Math.cos((a.la+b.la)/2*r),y=(
 function r5(m){return Math.max(5,Math.round(m/5)*5)}
 function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d.hotel,tr=TR[S.dest]||d.tr||['תחבורה ציבורית',6,'במכונה בתחנה או באפליקציה המקומית'],fx=d.abroad?1.2:1,lunch=i===0;
  function add(tt,title,note,cost,cat,stop){it.push({t:tt,title:title,note:note||'',cost:Math.round(cost||0),cat:cat,stop:stop})}
- function leg(to,name){var k=km(cur,to),dur;
+ function leg(to,name){if(to.own){add(t,'נסיעה אל '+name,'זמן הנסיעה לא מחושב. בדקו בכפתור הניווט');var L0=it[it.length-1];L0.from=cur;L0.to=to;L0.toName=name;L0.byName=1;t+=20;return}var k=km(cur,to),dur;
   if(S.car){dur=r5(k/(k>10?60:28)*60+8);add(t,'נסיעה ברכב אל '+name,dur+' דק׳ · '+k.toFixed(1)+' ק״מ · חניה בתשלום באזור')}
   else if(k<0.9){dur=r5(k/4*60);add(t,'הליכה אל '+name,dur+' דק׳ ברגל · '+Math.round(k*1000/50)*50+' מ׳')}
   else{dur=r5(k/(k>10?35:18)*60+10);add(t,tr[0]+' אל '+name,dur+' דק׳ · '+nis(tr[1])+' לנוסע · קונים '+tr[2],tr[1]*pay,'תחבורה ביעד')}
@@ -257,7 +258,7 @@ function vPlan(){var d=D(),days=dayOptions(),p=pax();
    html+='<div class="card'+(on?' sel':'')+'"><div class="sp"><h3>'+o.name+'</h3>'+(o.fit!==null?'<span class="tag">התאמה למשפחה '+o.fit+'%</span>':'')+'</div><p class="note">'+esc(o.why)+'</p>';
    if(!on&&o.stops.length)html+='<p>'+o.stops.map(function(s){return esc(s.n)}).join(' · ')+'</p>'
     +(o.stops.some(function(s){return WARN[s.n]})?'<p class="warn">יש אזהרות מהרשת על המסלול הזה</p>':'');
-   if(on&&o.stops.length)html+=dayNav(o.stops,d);if(on)it.forEach(function(x){var s=x.stop;
+   if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)it.forEach(function(x){var s=x.stop;
     html+='<div class="stop"><div class="sp"><b><span class="num">'+hm(x.t)+'</span> '+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
     if(s)html+='<div class="ph">תמונה של '+esc(s.n)+'</div><div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')
@@ -321,7 +322,7 @@ function tipsFor(dest,place){var now=Date.now(),g={};
   var k=r.kind+'|'+r.topic,o=g[k]||(g[k]={kind:r.kind,uids:{},ok:false,mine:false,last:r});
   o.uids[r.uid]=1;if(APPROVED[r.id]==='yes')o.ok=true;if(r.uid===CAP.uid)o.mine=true;if((+r.ts||0)>(+o.last.ts||0))o.last=r});
  return Object.keys(g).map(function(k){var o=g[k];o.cnt=Object.keys(o.uids).length;o.ver=o.ok||o.cnt>=2;return o}).filter(function(o){return (o.ver||o.mine||CAP.owner)&&famHasAge(o.last.minAge,o.last.maxAge)})}
-function tipsHtml(s,d){var h='';
+function tipsHtml(s,d){var h='';if(s.own)return '<p class="note">עצירה שהוספתם בעצמכם.</p>';
  if(s.ai)h+='<p><b>טיפ:</b> '+esc(s.rec)+' <span class="note">· נכתב על ידי בינה מלאכותית, לא אומת</span></p>';
  else{h+='<p><b>טיפ:</b> '+esc(s.rec)+' <span class="note">· '+src(s.n+'x')+' (דוגמה)</span></p>';
   if(WARN[s.n])h+='<p class="warn"><b>אזהרה:</b> '+esc(WARN[s.n])+' <span class="note">· '+src(s.n)+' (דוגמה)</span></p>'}
@@ -417,6 +418,7 @@ function vLeave(){var d=D();if(!d.abroad)return vLeave0();
  return h+'<button class="pri" data-go="plan">המשך למסלול</button>'}
 function gdir(a,b,mode){return 'https://www.google.com/maps/dir/?api=1&origin='+a.la+','+a.lo+'&destination='+b.la+','+b.lo+'&travelmode='+mode}
 function legBtns(x){var a=function(pri,url,label){return '<a class="btn grow'+(pri?' pri':'')+'" target="_blank" rel="noopener" href="'+esc(url)+'">'+label+'</a>'};
+ if(x.byName){var qn=encodeURIComponent(x.toName+' '+D().n);return '<div class="row">'+(S.car?a(1,'https://waze.com/ul?q='+qn+'&navigate=yes','Waze'):a(1,'https://moovitapp.com/?to='+qn,'Moovit'))+a(0,'https://www.google.com/maps/dir/?api=1&destination='+qn+'&travelmode='+(S.car?'driving':'transit'),'Google Maps')+'</div>'}
  if(S.car)return '<div class="row">'+a(1,waze(x.to.la,x.to.lo),'Waze')+a(0,gdir(x.from,x.to,'driving'),'Google Maps')+'</div>';
  if(/^הליכה/.test(x.title))return '<div class="row">'+a(1,gdir(x.from,x.to,'walking'),'מסלול הליכה ב-Google Maps')+'</div>';
  return '<div class="row">'+a(1,moovit(x.toName,x.to.la,x.to.lo),'Moovit')+a(0,gdir(x.from,x.to,'transit'),'Google Maps')+'</div>'}
@@ -558,6 +560,15 @@ async function mkDest(h){if(S.busy)return;var q=((h&&h.name)||S.newDest||'').tri
   var j=await api('POST','/api/dest',body),dd=j.dest,k='c_'+Date.now();S.custom[k]=dd;DEST[k]=dd;S.abroad=!!dd.abroad;S.dest=k;S.sel={};S.newDest='';S.fDep='';S.fPrice='';S.ticketNo='';PLACES=[]}
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
  S.busy=false;S.building='';render(1)}
+function custList(i){return (S.custDest===S.dest&&S.cust&&S.cust[i])||[]}
+function custStops(i){var d=D(),y=youngest();return custList(i).map(function(n){var a=d.at.filter(function(x){return x.n===n})[0];return a?Object.assign({},a,{small:y<a.min}):{n:n,own:true,la:d.hotel.la,lo:d.hotel.lo,who:'all',min:0,a:0,c:0,rec:''}})}
+function custEditor(i,d){var l=custList(i),y=youngest(),mv=function(j,dir,lab,sym){return '<button class="x" style="color:inherit" data-act="cmv" data-day="'+i+'" data-j="'+j+'" data-dir="'+dir+'" aria-label="'+lab+'">'+sym+'</button>'};
+ var h='<div class="stop"><b>העצירות שבחרתם</b>'+(l.length?l.map(function(n,j){return '<div class="sp" style="align-items:center"><span>'+(j+1)+'. '+esc(n)+'</span><span class="row" style="flex-wrap:nowrap">'+(j?mv(j,-1,'הזזה למעלה','↑'):'')+(j<l.length-1?mv(j,1,'הזזה למטה','↓'):'')+'<button class="x" data-act="cdel" data-day="'+i+'" data-j="'+j+'" aria-label="הסרת '+esc(n)+'">✕</button></span></div>'}).join(''):'<p class="note">עוד לא נבחרו עצירות. הוסיפו מהרשימה למטה, עד 6 ביום.</p>')+'</div>';
+ var av=d.at.filter(function(x){return l.indexOf(x.n)<0});
+ h+='<div class="stop"><b>הוספה מההמלצות</b>'+(av.length?av.map(function(x){var tips=tipsFor(d.n,x.n).length;return '<div class="sp" style="align-items:center"><span>'+esc(x.n)+' <span class="tag">'+(x.who==='kids'?'לילדים':x.who==='adults'?'למבוגרים':'לכולם')+(x.min?' · מגיל '+x.min:'')+'</span>'+(y<x.min?' <span class="warn">מעל הגיל של הצעיר</span>':'')+'<br><span class="note">'+esc(x.rec)+(tips?' · '+tips+' טיפים מהקהילה':'')+'</span></span><button data-act="cadd" data-day="'+i+'" data-n="'+esc(x.n)+'">הוספה</button></div>'}).join(''):'<p class="note">כל ההמלצות כבר במסלול.</p>')+'</div>';
+ h+='<div class="stop"><label for="own'+i+'">מקום משלכם<input id="own'+i+'" data-live="ownName" value="'+esc(S.ownName||'')+'" placeholder="מסעדה, פארק או חנות"></label><button data-act="cown" data-day="'+i+'">הוספת המקום</button><p class="note">למקום שהוספתם בעצמכם הניווט נפתח לפי השם, וזמן הנסיעה אליו לא מחושב.</p></div>';
+ return h}
+function custEdit(day,fn){if(S.custDest!==S.dest){S.cust={};S.custDest=S.dest}S.cust=S.cust||{};var l=S.cust[day]=S.cust[day]||[];fn(l);S.sel=S.sel||{};S.sel[day]='custom';render(1)}
 var TABS=[['family','משפחה',vFamily],['flight','טיסה',vFlight],['leave','יציאה',vLeave],['plan','מסלול',vPlan],['money','תקציב',vMoney],['share','שיתוף',vShare],['community','קהילה',vCommunity]];
 function render(keep){D();loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0];
  document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=t[2]();
@@ -586,6 +597,10 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='fbsend')doSend(b.dataset.place,S.fbText,S.fbRate==='bad'?'warn':'tip','family','');
  else if(act==='crsend')doSend(S.crPlace||(D().at[0]||{}).n,S.crText,S.crKind==='warn'?'warn':'tip','creator',S.crName);
  else if(act==='mkdest')mkDest(null);
+ else if(act==='cadd')custEdit(b.dataset.day,function(l){if(l.length<6&&l.indexOf(b.dataset.n)<0)l.push(b.dataset.n)});
+ else if(act==='cdel')custEdit(b.dataset.day,function(l){l.splice(+b.dataset.j,1)});
+ else if(act==='cmv')custEdit(b.dataset.day,function(l){var j=+b.dataset.j,k=j+ +b.dataset.dir;if(k>=0&&k<l.length){var x=l[j];l[j]=l[k];l[k]=x}});
+ else if(act==='cown')custEdit(b.dataset.day,function(l){var n=(S.ownName||'').trim().slice(0,60);if(n&&l.length<6&&l.indexOf(n)<0){l.push(n);S.ownName=''}});
  else if(act==='placepick'){if(PLACES[+b.dataset.i])mkDest(PLACES[+b.dataset.i])}
  else if(act==='poppick'){var pp=POP[+b.dataset.i];if(pp)mkDest({name:pp[0],code:pp[1]})}
  else if(act==='apprg')api('POST','/api/admin/approve',{ids:b.dataset.ids.split(','),status:b.dataset.v}).then(loadAdmin).catch(function(){});
