@@ -267,10 +267,37 @@ async function getOffers(req, env, url) {
   return json({ available: true, offers: matchOffers(list, names) });
 }
 
+/* ---- find a typed place (a hotel, a restaurant) on the map: OpenStreetMap, free, cached ---- */
+export function mapGeo(list, kind) {
+  const ok = (la, lo) => Number.isFinite(la) && Number.isFinite(lo) && (la !== 0 || lo !== 0);
+  if (kind === 'photon') {
+    const f = list && Array.isArray(list.features) ? list.features[0] : null, c = f && f.geometry && f.geometry.coordinates, pr = (f && f.properties) || {};
+    return c && ok(+c[1], +c[0]) ? { found: true, la: +c[1], lo: +c[0], label: str([pr.name, pr.city, pr.country].filter(Boolean).join(', '), 120) } : null;
+  }
+  const x = Array.isArray(list) ? list[0] : null;
+  return x && ok(+x.lat, +x.lon) ? { found: true, la: +x.lat, lo: +x.lon, label: str(x.display_name, 120) } : null;
+}
+async function getGeo(req, env, url) {
+  const q = str(url.searchParams.get('q'), 80), la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo'));
+  if (q.length < 2) return bad('q');
+  const near = la != null && lo != null, k = 'geo:' + q.toLowerCase() + (near ? ':' + la.toFixed(1) + ',' + lo.toFixed(1) : '');
+  const hit = await cacheGet(env, k); if (hit) return json(hit);
+  if (await bump(env, 'geo:' + today()) > 2000) return json({ found: false, reason: 'limit' });
+  const get = async (u) => { try { const r = await fetch(u, { headers: { 'user-agent': 'HaniaGo/1.0 (https://go.hania360.com)', 'accept-language': 'he,en' } }); return r.ok ? await r.json() : null; } catch { return null; } };
+  const nom = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q);
+  const box = near ? '&viewbox=' + [lo - 0.7, la + 0.7, lo + 0.7, la - 0.7].map((v) => v.toFixed(3)).join(',') : '';
+  let out = near ? mapGeo(await get(nom + box + '&bounded=1')) : null;
+  if (!out) out = mapGeo(await get('https://photon.komoot.io/api/?limit=1&q=' + encodeURIComponent(q) + (near ? '&lat=' + la + '&lon=' + lo : '')), 'photon');
+  if (!out && !near) out = mapGeo(await get(nom));
+  if (near && out && (Math.abs(out.la - la) > 3 || Math.abs(out.lo - lo) > 3)) out = null;
+  out = out || { found: false };
+  await cachePut(env, k, out, (out.found ? 90 : 1) * 864e5);
+  return json(out);
+}
 const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick,
-  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers,
+  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo,
 };
 export default {
   async fetch(req, env) {
