@@ -385,8 +385,10 @@ function enName(d){return d.en||EN[S.dest]||d.n}
 function addDays(s,n){var d=new Date(s+'T12:00');if(isNaN(d))return s;d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function bookingUrl(d){var ad=0,ch=[];S.fam.forEach(function(m){var g=+m.a||0;if(g>=18)ad++;else ch.push(g)});
  return 'https://www.booking.com/searchresults.html?ss='+encodeURIComponent(enName(d))+'&checkin='+S.date+'&checkout='+addDays(S.date,nights())+'&group_adults='+Math.max(1,ad)+'&group_children='+ch.length+ch.map(function(g){return '&age='+g}).join('')+'&lang=he&selected_currency=ILS'+(AFF.booking?'&aid='+AFF.booking:'')}
+var INS_PAGE='';
+function insUrl(d){if(!INS_PAGE)return AFF.ins||'https://shukabit.co.il/%D7%91%D7%99%D7%98%D7%95%D7%97-%D7%A0%D7%A1%D7%99%D7%A2%D7%95%D7%AA-%D7%9C%D7%97%D7%95%D7%9C';return INS_PAGE+'?destination='+encodeURIComponent(d.n)+'&start='+S.date+'&end='+addDays(S.date,nights())+'&ages='+S.fam.map(function(m){return +m.a||0}).join(',')+'&return='+encodeURIComponent(location.origin)}
 function extras(d){if(!d.abroad)return '';var b=function(p,url,label){return '<a class="btn grow" data-partner="'+p+'" target="_blank" rel="noopener" href="'+url+'">'+label+'</a>'};
- return '<div class="card"><h3>לסגור לפני הטיסה</h3><div class="row">'+(S.car?b('car','https://www.economybookings.com/','השכרת רכב'):b('taxi','https://kiwitaxi.com/','הסעה משדה התעופה'))+b('esim','https://www.airalo.com/','חבילת גלישה לחו״ל')+'</div><div class="row">'+b('ins',AFF.ins||'https://shukabit.co.il/%D7%91%D7%99%D7%98%D7%95%D7%97-%D7%A0%D7%A1%D7%99%D7%A2%D7%95%D7%AA-%D7%9C%D7%97%D7%95%D7%9C','ביטוח נסיעות: השוואת מחירים')+'</div><p class="note">קישורי שותפים: HaniaGo מקבלת עמלה על הזמנה, והמחיר שלכם לא משתנה. הקישורים נפתחים בדף הבית של הספק, ואת היעד והתאריכים מזינים שם.</p></div>'}
+ return '<div class="card"><h3>לסגור לפני הטיסה</h3><div class="row">'+(S.car?b('car','https://www.economybookings.com/','השכרת רכב'):b('taxi','https://kiwitaxi.com/','הסעה משדה התעופה'))+b('esim','https://www.airalo.com/','חבילת גלישה לחו״ל')+'</div><div class="row">'+b('ins',insUrl(d),'ביטוח נסיעות: השוואת מחירים')+'</div>'+(INS_PAGE?'<p class="note">בלחיצה על ביטוח נסיעות עוברים להנחה בכיס עם היעד, התאריכים והגילים, בלי שמות. הפרטים לא נשמרים שם.</p>':'')+'<p class="note">קישורי שותפים: HaniaGo מקבלת עמלה על הזמנה, והמחיר שלכם לא משתנה. הקישורים נפתחים בדף הבית של הספק, ואת היעד והתאריכים מזינים שם.</p></div>'}
 function tiqetsUrl(s,d){var u='https://www.tiqets.com/en/search?q='+encodeURIComponent(((s.en||'')+' '+enName(d)).trim());return u}
 function gygUrl(n,d){return 'https://www.getyourguide.com/s/?q='+encodeURIComponent(n+' '+enName(d))+(AFF.gyg?'&partner_id='+AFF.gyg:'')}
 function skyUrl(d){var f=function(s){return s.slice(2).replace(/-/g,'')};
@@ -796,6 +798,7 @@ document.addEventListener('visibilitychange',function(){if(document.visibilitySt
  window.addEventListener('appinstalled',function(){b.hidden=true;help.hidden=true});
  if(/iphone|ipad|ipod/i.test(navigator.userAgent))b.hidden=false;
  b.addEventListener('click',function(){if(ev){ev.prompt();ev=null;b.hidden=true}else help.hidden=!help.hidden})})();
+if(location.hash==='#ins=done'){S.pack=S.pack||{};S.pack['ביטוח נסיעות']=true;S.started=true;S.tab='leave';try{history.replaceState(null,'',location.pathname)}catch(e){}}
 var h=(location.hash||'').slice(1);if(TABS.some(function(x){return x[0]===h})){S.tab=h;HASHTAB=1}
 render();
 </script>
