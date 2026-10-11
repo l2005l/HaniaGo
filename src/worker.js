@@ -134,7 +134,7 @@ async function postClick(req, env) {
 }
 
 /* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
-const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip'];
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_other'];
 async function postEvent(req, env) {
   const b = await req.json().catch(() => null), e = str(b && b.e, 30);
   if (!EVENTS.includes(e)) return bad('event');
