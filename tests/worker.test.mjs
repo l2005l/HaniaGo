@@ -247,6 +247,7 @@ test('usage events are counted per day and only known names are accepted', async
 test('a share link without a point still gives the place name, and the page can give the point', () => {
   assert.equal(placeName('https://www.google.com/maps/place/Shuk+Restaurant,+Ermou+120,+Athina+105+54/data=!4m2!3m1!1s0x14a1bd:0x1?utm_source=mapsmobile'), 'Shuk Restaurant, Ermou 120, Athina 105 54');
   assert.equal(placeName('https://www.google.com/maps/@37.9,23.7,15z'), '');
+  assert.equal(placeName('https://www.google.com/maps/place/Shuk%2BRestaurant/data=!4m2'), 'Shuk Restaurant');
   assert.deepEqual(coordsInPage('<meta content="https://maps.google.com/maps/api/staticmap?center=37.9781%2C23.7214&zoom=17">'), { la: 37.9781, lo: 23.7214 });
   assert.equal(coordsInPage('<html>nothing</html>'), null);
 });

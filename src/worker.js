@@ -370,7 +370,7 @@ const MAPHOST = /^(maps\.app\.goo\.gl|goo\.gl|(www\.|maps\.|consent\.)?google\.[
 /* the place name that Google puts in the path of a share link: /maps/place/<name, address>/ */
 export function placeName(u) {
   const m = /\/maps\/place\/([^/@?]+)/.exec(String(u || '')); if (!m) return '';
-  try { return str(decodeURIComponent(m[1].replace(/\+/g, ' ')), 140); } catch { return ''; }
+  try { return str(decodeURIComponent(m[1].replace(/\+/g, ' ')).replace(/\+/g, ' ').replace(/\s+/g, ' ').trim(), 140); } catch { return ''; }
 }
 /* coordinates printed inside the Google Maps page itself, for share links that carry none */
 export function coordsInPage(html) {

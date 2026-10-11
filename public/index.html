@@ -320,7 +320,7 @@ function vPlan(){var d=D(),days=dayOptions(),p=pax();loadWx();
    if(!on&&o.stops.length)html+='<p>'+o.stops.map(function(s){return esc(s.n)}).join(' · ')+'</p>'
     +(o.stops.some(function(s){return WARN[s.n]})?'<p class="warn">יש אזהרות מהרשת על המסלול הזה</p>':'');
    if(on&&o.k==='custom')html+=custEditor(i,d);if(on&&o.stops.filter(function(x){return !x.own}).length)html+=dayNav(o.stops.filter(function(x){return !x.own}),d);if(on)html+=foodBtns(o.stops,d)+dayAdd(i);if(on){html+='<div class="rail">';it.forEach(function(x){var s=x.stop;
- html+='<div class="ri'+(x.from?' leg':s?' main':'')+'"><span class="rt num">'+hm(x.t)+'</span><span class="rd"></span><div class="rb">'+(s?'<div class="rc">':'')+'<div class="sp"><b>'+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s?'<span class="num">חינם</span>':'')+'</div>'+(x.note?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
+ html+='<div class="ri'+(x.from?' leg':s?' main':'')+'"><span class="rt num">'+hm(x.t)+'</span><span class="rd"></span><div class="rb">'+(s?'<div class="rc">':'')+'<div class="sp"><b>'+esc(x.title)+'</b>'+(x.cost?'<span class="num">'+nis(x.cost)+'</span>':s&&!s.mine?'<span class="num">חינם</span>':'')+'</div>'+(x.note&&!(s&&s.mine)?'<p class="note">'+esc(x.note)+'</p>':'');if(x.from)html+=legBtns(x);
  if(s)html+=photoHtml(s,d)+'<div class="row"><span class="tag">'+(s.who==='kids'?'לילדים':s.who==='adults'?'למבוגרים':'לכל המשפחה')+'</span>'+(s.min?'<span class="tag">מגיל '+s.min+'</span>':'')+'</div>'
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')
      +tipsHtml(s,d)
@@ -676,7 +676,7 @@ async function mkDest(h){if(S.busy)return;var old='',q=((h&&h.name)||S.newDest||
  catch(e){S.err2=e&&e.error==='limit'?'אפשר לבנות עד 8 יעדים חדשים ביום.':e&&e.error==='unavailable'?'בניית יעדים עוד לא מחוברת בשרת.':e&&e.error==='not_found'?'לא מצאתי יעד בשם הזה. בדקו את השם, או בחרו מהרשימה.':'הבנייה של '+q+' נכשלה הפעם. נסו שוב בעוד רגע.'}
  S.busy=false;S.building='';render(1)}
 var GEO={},HASHTAB=0,EVS={};
-var VERSION='1.6',WHATSNEW=['הוספת מקום מ-Google Maps ישר מתוך כל יום במסלול','כפתור סיורים ופעילויות ביעד','ביטוח נסיעות: בדיקת הטבות לפי הכרטיסים שלכם','כפתור טיול חדש בראש המסך'];
+var VERSION='1.7',WHATSNEW=['הוספת מקום מ-Google Maps ישר מתוך כל יום במסלול','כפתור סיורים ופעילויות ביעד','ביטוח נסיעות: בדיקת הטבות לפי הכרטיסים שלכם','כפתור טיול חדש בראש המסך'];
 var SEENV='';try{SEENV=localStorage.getItem('haniago_ver')||''}catch(e){}
 function newsCard(){if(SEENV===VERSION)return '';return '<div class="card sel"><div class="sp"><h3>האפליקציה התעדכנה</h3><span class="tag">גרסה '+VERSION+'</span></div><ul style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px">'+WHATSNEW.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><button data-act="newsok">הבנתי</button></div>'}
 function verLine(){return '<p class="note" style="text-align:center">HaniaGo · גרסה '+VERSION+' · <button data-act="newsshow" style="min-height:44px;border:0;background:none;padding:0 4px;color:inherit;text-decoration:underline;font-weight:400">מה חדש</button></p>'}
@@ -698,7 +698,7 @@ function dayAdd(i){return '<div class="stop"><label for="da'+i+'">מצאתם מ�
 async function shareApply(day){var x=S.shareIn,d=D();if(!x||S.shBusy)return;var name=((S.shName!=null?S.shName:x.name)||'').trim().slice(0,60);
  S.shBusy=true;S.shMsg2='';render(1);var g=null,j=null;
  try{j=await geo(x.link,d);if(j&&j.found)g={la:j.la,lo:j.lo,label:j.label}}catch(e){}
- if(!name&&j&&j.name)name=String(j.name).slice(0,60);
+ if(!name&&j&&j.name)name=String(j.name).replace(/\+/g,' ').trim().slice(0,60);
  if(!g&&name)try{var j2=await geo(name,d);if(j2&&j2.found)g={la:j2.la,lo:j2.lo,label:j2.label}}catch(e){}
  S.shBusy=false;
  if(!name){S.shName='';S.shMsg2='לא הצלחתי לקרוא את שם המקום מהקישור. כתבו שם, והמקום ייכנס למסלול.';return render(1)}
