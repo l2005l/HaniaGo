@@ -1,3 +1,4 @@
+import { destPage, indexPage, sitemap } from './pages.js';
 // HaniaGo API. Every external data source is optional: without its key the
 // endpoint answers {available:false} and the app falls back to its own estimate.
 const TOPICS = ['תורים', 'עגלה', 'חום', 'מחיר', 'בטיחות', 'גיל', 'אוכל', 'כללי'];
@@ -150,7 +151,7 @@ async function postClick(req, env) {
 }
 
 /* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
-const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_other'];
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_page', 'src_other'];
 async function postEvent(req, env) {
   const b = await req.json().catch(() => null), e = str(b && b.e, 30);
   if (!EVENTS.includes(e)) return bad('event');
@@ -486,6 +487,11 @@ export { NOTES };
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    const html = (t, type = 'text/html; charset=utf-8') => new Response(t, { headers: { 'content-type': type, 'cache-control': 'public, max-age=3600' } });
+    if (url.pathname === '/robots.txt') return html('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://go.hania360.com/sitemap.xml\n', 'text/plain; charset=utf-8');
+    if (url.pathname === '/sitemap.xml') return html(sitemap(), 'application/xml; charset=utf-8');
+    if (url.pathname === '/d' || url.pathname === '/d/') return html(indexPage());
+    if (url.pathname.startsWith('/d/')) { const pg = destPage(url.pathname.slice(3).replace(/\/$/, '')); return pg ? html(pg) : new Response('Not found', { status: 404 }); }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Not found', { status: 404 });
     if (url.pathname === '/api/health') return json({ ok: true, flights: !!env.TRAVELPAYOUTS_TOKEN, routes: !!env.GOOGLE_KEY, ai: !!env.AI });
     const h = ROUTES[req.method + ' ' + url.pathname];

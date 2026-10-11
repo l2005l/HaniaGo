@@ -260,3 +260,12 @@ test('a shared view of a trip is stored under a new id and read back by anyone',
   assert.equal((await call(env, 'GET', '/api/share?id=aaaaaaaaaa')).status, 404);
   assert.equal((await call(env, 'POST', '/api/share', { device: dev, body: { nights: 3 } })).status, 400);
 });
+
+test('destination pages are real pages with a plan, and unknown ones are 404', async () => {
+  const env = { DB: fakeD1() };
+  const r = await call(env, 'GET', '/d/rome'), t = await r.text();
+  assert.equal(r.status, 200); assert.match(t, /<h1>רומא עם ילדים/); assert.match(t, /הקולוסיאום/); assert.match(t, /rel="canonical" href="https:\/\/go\.hania360\.com\/d\/rome"/);
+  assert.equal((await call(env, 'GET', '/d/nowhere')).status, 404);
+  assert.match(await (await call(env, 'GET', '/sitemap.xml')).text(), /\/d\/athens/);
+  assert.match(await (await call(env, 'GET', '/robots.txt')).text(), /Sitemap:/);
+});
