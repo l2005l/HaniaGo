@@ -301,29 +301,37 @@ export function matchOffers(list, names) {
   for (const name of names) { const n = norm(name); if (n.length < 3) continue;
     const hit = (o) => (o.names || [o.storeName]).some((x) => { const s = norm(x); return s.length >= 3 && (s.includes(n) || n.includes(s)); });
     const m = list.filter(hit).slice(0, 3)
-      .map((o) => ({ label: str(o.label, 120), card: str(o.cardName, 60), pending: o.pending ? true : undefined, url: /^https:\/\/save\.hania360\.com\//.test(o.actionUrl || '') || (!o.special && /^https:\/\//.test(o.actionUrl || '')) ? o.actionUrl : 'https://save.hania360.com/' }));
+      .map((o) => {
+        const url = new URL('https://save.hania360.com/');
+        url.searchParams.set('store', o.storeName || o.names?.[0] || name);
+        if (o.cardId) url.searchParams.set('card', o.cardId);
+        if (o.special && o.sourceUrl) url.searchParams.set('source', o.sourceUrl);
+        else url.searchParams.set('offer', o.label || '');
+        return { label: str(o.label, 120), card: str(o.cardName, 60), pending: o.pending ? true : undefined, url: url.toString() };
+      });
     if (m.length) out[name] = m; }
   return out;
 }
 /* club and card benefits from the second Hanaha Bakis list, brought into the same shape */
 export function mapSpecial(list) {
+  const cardAliases = { 'שלך': 'shelach', 'שלך-לגמלאי': 'shelachretired', 'shelach-pensioner': 'shelachretired', 'kranot-hashoter': 'police', 'כאל-(כאל)': 'cal', 'diners-club': 'diners', hever: 'hever-yellow', 'pais-plus': 'pais', 'בהצדעה': 'behatzdaa', 'תמורה': 'teachers2', tov: 'civil' };
   return (Array.isArray(list) ? list : []).filter((b) => b && b.merchant).map((b) => {
     const v = +b.benefitValue, pr = +b.purchasePrice, t = b.benefitType;
     const label = t === 'special_price' && pr > 0 ? 'מחיר מיוחד ₪' + pr : (t === 'charge_discount' || t === 'cashback') && v > 0 ? v + '% ' + (t === 'cashback' ? 'קאשבק' : 'הנחה') : t === 'buy_x_get_y' ? '1+1' : t === 'discounted_voucher' && pr > 0 && +b.faceValue > 0 ? 'שובר ₪' + (+b.faceValue) + ' ב-₪' + pr : str(b.conditions, 80);
-    return { special: true, names: [b.merchant].concat(Array.isArray(b.aliases) ? b.aliases : []).slice(0, 8), label, cardName: b.cardName || b.provider, actionUrl: b.actionUrl || b.url || '', pending: b.verificationStatus !== 'verified' };
+    return { special: true, storeName: b.merchant, cardId: cardAliases[b.cardId] || b.cardId, sourceUrl: b.sourceUrl, names: [b.merchant].concat(Array.isArray(b.aliases) ? b.aliases : []).slice(0, 8), label, cardName: b.cardName || b.provider, actionUrl: b.actionUrl || b.url || '', pending: b.verificationStatus !== 'verified' };
   }).filter((o) => o.label);
 }
 async function getOffers(req, env, url) {
   const names = str(url.searchParams.get('names'), 1500).split('|').map((s) => s.trim()).filter(Boolean).slice(0, 12);
   if (!names.length) return bad('names');
-  let list = await cacheGet(env, 'offers2');
+  let list = await cacheGet(env, 'offers3');
   if (!list) {
     const base = (env.OFFERS_URL || 'https://save.hania360.com/api/offers'), get = async (u) => { try { const r = await fetch(u); return r.ok ? await r.json() : null; } catch { return null; } };
     const [a, b] = await Promise.all([get(base), get(base.replace(/\/offers$/, '/special-benefits'))]);
     if (!a && !b) return json({ available: false, offers: {} });
-    const reg = (Array.isArray(a) ? a : (a && (a.offers || a.results)) || []).slice(0, 3000).map((o) => ({ storeName: o.storeName, label: o.label, cardName: o.cardName, actionUrl: o.actionUrl }));
+    const reg = (Array.isArray(a) ? a : (a && (a.offers || a.results)) || []).slice(0, 3000).map((o) => ({ storeName: o.storeName, label: o.label, cardId: o.cardId, cardName: o.cardName, actionUrl: o.actionUrl }));
     list = reg.concat(mapSpecial(b && b.benefits).slice(0, 3000));
-    await cachePut(env, 'offers2', list, 3600e3);
+    await cachePut(env, 'offers3', list, 3600e3);
   }
   return json({ available: true, offers: matchOffers(list, names) });
 }
