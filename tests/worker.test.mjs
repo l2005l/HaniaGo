@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -242,4 +242,11 @@ test('usage events are counted per day and only known names are accepted', async
   const now = Date.parse('2026-10-11T12:00:00Z');
   const s = sumEvents([{ k: 'ev:2026-10-11:open', n: 2 }, { k: 'ev:2026-10-06:open', n: 3 }, { k: 'ev:2026-09-01:open', n: 9 }, { k: 'ev:2026-10-11:start', n: 1 }, { k: 'google:2026-10', n: 5 }], 7, now);
   assert.deepEqual(s, { open: 5, start: 1 });
+});
+
+test('a share link without a point still gives the place name, and the page can give the point', () => {
+  assert.equal(placeName('https://www.google.com/maps/place/Shuk+Restaurant,+Ermou+120,+Athina+105+54/data=!4m2!3m1!1s0x14a1bd:0x1?utm_source=mapsmobile'), 'Shuk Restaurant, Ermou 120, Athina 105 54');
+  assert.equal(placeName('https://www.google.com/maps/@37.9,23.7,15z'), '');
+  assert.deepEqual(coordsInPage('<meta content="https://maps.google.com/maps/api/staticmap?center=37.9781%2C23.7214&zoom=17">'), { la: 37.9781, lo: 23.7214 });
+  assert.equal(coordsInPage('<html>nothing</html>'), null);
 });
