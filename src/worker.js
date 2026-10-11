@@ -116,7 +116,8 @@ async function adminQueue(req, env) {
   const queue = Object.values(g).filter((o) => o.devices.size < 2).map((o) => ({ ids: o.ids, dest: o.r.dest, place: o.r.place, kind: o.r.kind, topic: o.r.topic, text: o.r.text, src: o.r.src, srcName: o.r.src_name }));
   const clicks = (await env.DB.prepare('SELECT partner, COUNT(*) AS c FROM clicks GROUP BY partner').all()).results;
   const month = today().slice(0, 7);
-  return json({ queue, clicks, usage: { google: await count(env, 'google:' + month), googleCap: +(env.GOOGLE_MONTHLY_CAP || 4500), ai: await count(env, 'ai:' + today()) } });
+  const evRows = (await env.DB.prepare("SELECT k,n FROM counters WHERE k LIKE 'ev:%'").all()).results;
+  return json({ queue, clicks, events: { week: sumEvents(evRows, 7), month: sumEvents(evRows, 30) }, usage: { google: await count(env, 'google:' + month), googleCap: +(env.GOOGLE_MONTHLY_CAP || 4500), ai: await count(env, 'ai:' + today()) } });
 }
 async function adminApprove(req, env) {
   const denied = await adminGate(req, env); if (denied) return denied;
@@ -132,6 +133,19 @@ async function postClick(req, env) {
   return json({ ok: true });
 }
 
+/* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip'];
+async function postEvent(req, env) {
+  const b = await req.json().catch(() => null), e = str(b && b.e, 30);
+  if (!EVENTS.includes(e)) return bad('event');
+  await bump(env, 'ev:' + today() + ':' + e);
+  return json({ ok: true });
+}
+export function sumEvents(rows, days, now = Date.now()) {
+  const from = new Date(now - (days - 1) * 864e5).toISOString().slice(0, 10), out = {};
+  for (const r of rows || []) { const m = /^ev:(\d{4}-\d{2}-\d{2}):([a-z_]+)$/.exec(r.k); if (m && m[1] >= from) out[m[2]] = (out[m[2]] || 0) + r.n; }
+  return out;
+}
 /* ---- flights: cached real prices from the Travelpayouts Data API ---- */
 export function mapFlights(data, marker = '') {
   const link = (l) => { if (!l) return ''; const u = 'https://www.aviasales.com' + l; const add = (x, k, v) => (new RegExp('[?&]' + k + '=').test(x) ? x : x + (x.includes('?') ? '&' : '?') + k + '=' + encodeURIComponent(v)); return add(marker ? add(u, 'marker', marker) : u, 'locale', 'he'); };
@@ -404,7 +418,7 @@ async function postNotes(req, env) {
 }
 const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
-  'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick,
+  'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
   'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'POST /api/notes': postNotes,
 };
 export { NOTES };

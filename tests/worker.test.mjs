@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -233,3 +233,13 @@ test('offers include special benefits with honest verification status and a dire
   } finally { globalThis.fetch = originalFetch; }
 });
 
+
+test('usage events are counted per day and only known names are accepted', async () => {
+  const env = { DB: fakeD1() };
+  assert.equal((await call(env, 'POST', '/api/ev', { body: { e: 'open' } })).status, 200);
+  assert.equal((await call(env, 'POST', '/api/ev', { body: { e: 'open' } })).status, 200);
+  assert.equal((await call(env, 'POST', '/api/ev', { body: { e: 'drop table' } })).status, 400);
+  const now = Date.parse('2026-10-11T12:00:00Z');
+  const s = sumEvents([{ k: 'ev:2026-10-11:open', n: 2 }, { k: 'ev:2026-10-06:open', n: 3 }, { k: 'ev:2026-09-01:open', n: 9 }, { k: 'ev:2026-10-11:start', n: 1 }, { k: 'google:2026-10', n: 5 }], 7, now);
+  assert.deepEqual(s, { open: 5, start: 1 });
+});
