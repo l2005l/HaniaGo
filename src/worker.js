@@ -229,6 +229,18 @@ async function getTrain(req, env, url) {
   } catch { return json({ available: false, reason: 'provider' }); }
 }
 
+/* ---- exchange rates against the shekel, refreshed twice a day ---- */
+async function getFx(req, env) {
+  const hit = await cacheGet(env, 'fx'); if (hit) return json(hit);
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/ILS'), j = r.ok ? await r.json() : null;
+    if (!j || j.result !== 'success' || !j.rates) return json({ available: false });
+    const out = { available: true, rates: Object.fromEntries(Object.entries(j.rates).filter(([k, v]) => /^[A-Z]{3}$/.test(k) && v > 0)) };
+    await cachePut(env, 'fx', out, 12 * 3600e3);
+    return json(out);
+  } catch { return json({ available: false }); }
+}
+
 /* ---- weather for the trip days: a forecast when close, last year's same dates when far ---- */
 export function mapWeather(j, kind) {
   const d = j && j.daily; if (!d || !Array.isArray(d.time)) return null;
@@ -452,7 +464,7 @@ async function postNotes(req, env) {
 const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
-  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'POST /api/notes': postNotes,
+  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
 };
 export { NOTES };
 export default {
