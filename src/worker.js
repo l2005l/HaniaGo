@@ -59,6 +59,22 @@ async function getTrip(req, env) {
   const r = await env.DB.prepare('SELECT state,ts FROM trips WHERE device=?').bind(d).first();
   return json(r ? { state: r.state, ts: r.ts } : { state: null });
 }
+/* a read-only copy of a trip, opened by anyone who has the link; it holds no names */
+async function postShare(req, env) {
+  const d = deviceOf(req); if (!d) return bad('device');
+  const body = await req.text(); if (body.length > 40000) return bad('too large', 413);
+  let o; try { o = JSON.parse(body); } catch { return bad('json'); }
+  if (!o || typeof o !== 'object' || !o.dest || !Array.isArray(o.dest.at)) return bad('shape');
+  if (await bump(env, 'share:' + d + ':' + today()) > 10) return json({ error: 'limit' }, 429);
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(10)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+  await env.DB.prepare('INSERT INTO trips (device,state,ts) VALUES (?,?,?)').bind('s:' + id, body, Date.now()).run();
+  return json({ id });
+}
+async function getShare(req, env, url) {
+  const id = str(url.searchParams.get('id'), 20); if (!/^[a-z0-9]{10}$/.test(id)) return bad('id');
+  const r = await env.DB.prepare('SELECT state FROM trips WHERE device=?').bind('s:' + id).first();
+  return r ? json({ trip: JSON.parse(r.state) }) : json({ error: 'not_found' }, 404);
+}
 async function putTrip(req, env) {
   const d = tripKey(req); if (!d) return bad('device');
   const body = await req.text();
@@ -134,7 +150,7 @@ async function postClick(req, env) {
 }
 
 /* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
-const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_other'];
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_other'];
 async function postEvent(req, env) {
   const b = await req.json().catch(() => null), e = str(b && b.e, 30);
   if (!EVENTS.includes(e)) return bad('event');
@@ -462,7 +478,7 @@ async function postNotes(req, env) {
   return json(out);
 }
 const ROUTES = {
-  'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
+  'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'POST /api/share': postShare, 'GET /api/share': getShare, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
   'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
 };

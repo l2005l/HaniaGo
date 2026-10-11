@@ -251,3 +251,12 @@ test('a share link without a point still gives the place name, and the page can 
   assert.deepEqual(coordsInPage('<meta content="https://maps.google.com/maps/api/staticmap?center=37.9781%2C23.7214&zoom=17">'), { la: 37.9781, lo: 23.7214 });
   assert.equal(coordsInPage('<html>nothing</html>'), null);
 });
+
+test('a shared view of a trip is stored under a new id and read back by anyone', async () => {
+  const env = { DB: fakeD1() }, dev = '11111111-1111-4111-8111-111111111111';
+  const r = await (await call(env, 'POST', '/api/share', { device: dev, body: { dest: { n: 'רומא', at: [] }, nights: 3 } })).json();
+  assert.match(r.id, /^[a-z0-9]{10}$/);
+  assert.equal((await (await call(env, 'GET', '/api/share?id=' + r.id)).json()).trip.nights, 3);
+  assert.equal((await call(env, 'GET', '/api/share?id=aaaaaaaaaa')).status, 404);
+  assert.equal((await call(env, 'POST', '/api/share', { device: dev, body: { nights: 3 } })).status, 400);
+});
