@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage, mapWhere } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -268,4 +268,17 @@ test('destination pages are real pages with a plan, and unknown ones are 404', a
   assert.equal((await call(env, 'GET', '/d/nowhere')).status, 404);
   assert.match(await (await call(env, 'GET', '/sitemap.xml')).text(), /\/d\/athens/);
   assert.match(await (await call(env, 'GET', '/robots.txt')).text(), /Sitemap:/);
+});
+
+test('a photo location becomes a place name, airports are flagged, and lookups are cached', async () => {
+  const env = { DB: fakeD1() }; let calls = 0; const real = globalThis.fetch;
+  globalThis.fetch = async () => { calls++; return new Response(JSON.stringify({ category: 'aeroway', name: 'נמל התעופה בן גוריון', address: { aeroway: 'נתב"ג', city: 'לוד', country: 'ישראל', country_code: 'il' } })); };
+  try {
+    const r = await (await call(env, 'GET', '/api/where?la=32.0052&lo=34.8851')).json();
+    assert.equal(r.airport, true); assert.equal(r.name, 'נתב"ג'); assert.equal(r.cc, 'IL');
+    await call(env, 'GET', '/api/where?la=32.00521&lo=34.88512'); assert.equal(calls, 1, 'nearby point is served from cache');
+    assert.equal((await call(env, 'GET', '/api/where?la=abc&lo=1')).status, 400);
+  } finally { globalThis.fetch = real; }
+  assert.deepEqual(mapWhere({ name: 'קולוסיאום', category: 'tourism', address: { city: 'רומא', country: 'איטליה', country_code: 'it' } }), { found: true, name: 'קולוסיאום', city: 'רומא', country: 'איטליה', cc: 'IT', airport: false });
+  assert.equal(mapWhere({ error: 'Unable to geocode' }).found, false);
 });

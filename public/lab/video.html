@@ -49,30 +49,35 @@ input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
 .bar i{display:block;height:100%;width:0;background:var(--sea);transition:width .2s linear}
 .note{font-size:14px;color:var(--muted);border-inline-start:3px solid var(--sun);padding-inline-start:10px}
 .err{color:var(--bad);font-weight:600}
+.col{display:flex;flex-direction:column;gap:8px}
+.days .sub{display:block;color:var(--muted);font-size:13px;font-weight:400}
+.days div{align-items:flex-start}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>סרטון הטיול<small>אב טיפוס לבדיקה. הכול נבנה על הטלפון, ושום תמונה לא עולה לשרת.</small></h1>
+    <h1>סרטון הטיול<small>אב טיפוס לבדיקה. הסרטון נבנה על הטלפון, והתמונות לא עולות לשרת. נשלחות רק נקודות ציון מעוגלות כדי לזהות את שם המקום.</small></h1>
   </header>
 
-  <section aria-labelledby="h-trip">
-    <h2 id="h-trip"><span class="n">1</span>הטיול</h2>
-    <p>טיול לדוגמה: <b>רומא, 3 ימים, 15 עד 17 בנובמבר</b>, עם 10 מקומות. בגרסה האמיתית זה יגיע מהמסלול ששמרתם ב-HaniaGo.</p>
-  </section>
-
   <section aria-labelledby="h-photos">
-    <h2 id="h-photos"><span class="n">2</span>תמונות</h2>
-    <p class="muted">עד 30 תמונות. הן מחולקות לימים לפי תאריך הצילום. אם אין תאריך, הן מתחלקות שווה בשווה לפי הסדר.</p>
+    <h2 id="h-photos"><span class="n">1</span>תמונות מהטיול</h2>
+    <p class="muted">הסיפור נבנה מהתמונות עצמן: תאריך הצילום קובע את היום, ומיקום הצילום קובע את שם המקום. כך גם יציאה מהבית, שדה התעופה ושינויים מהתוכנית נכנסים נכון. עד 80 תמונות.</p>
     <div class="row">
       <label class="btn" for="files">בחירה מהגלריה</label>
       <input id="files" type="file" accept="image/*" multiple>
-      <button id="demo" type="button">תמונות לדוגמה</button>
+      <label class="btn" for="files2">בחירה מהקבצים</label>
+      <input id="files2" type="file" accept="image/jpeg,image/heic,image/heif,image/png,.jpg,.jpeg,.heic" multiple>
+      <button id="demo" type="button">דוגמה</button>
     </div>
+    <p id="diag" class="note" hidden></p>
     <div id="thumbs" class="thumbs"></div>
-    <div id="days" class="days"></div>
+  </section>
+
+  <section aria-labelledby="h-story" id="storysec" hidden>
+    <h2 id="h-story"><span class="n">2</span>הסיפור שזוהה</h2>
+    <div id="story" class="days"></div>
   </section>
 
   <section aria-labelledby="h-music">
@@ -87,216 +92,14 @@ input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
     <button id="make" class="main" type="button" disabled>יצירת הסרטון</button>
     <div id="prog" hidden><div class="bar"><i id="bari"></i></div><p id="progt" class="muted"></p></div>
     <div class="stage"><canvas id="cv" width="720" height="1280" hidden></canvas><video id="out" controls playsinline hidden></video></div>
-    <div id="done" class="row" hidden>
-      <a id="save" class="btn" download="haniago-trip">שמירה</a>
-      <button id="share" type="button">שיתוף</button>
-      <button id="again" type="button">יצירה מחדש</button>
+    <div id="done" class="col" hidden>
+      <button id="share" class="main" type="button">שיתוף (וואטסאפ ועוד)</button>
+      <div class="row"><a id="save" class="btn" download="haniago-trip">שמירה בטלפון</a><button id="again" type="button">יצירה מחדש</button></div>
+      <p id="saved" class="muted" hidden>הסרטון נשמר בתיקיית ההורדות בטלפון.</p>
     </div>
     <p id="fmt" class="muted"></p>
   </section>
 </main>
-<script>
-(function(){
-'use strict';
-var W=720,H=1280,FPS=30;
-var TRIP={dest:'רומא',dates:'15–17.11.2026',days:[
- {stops:[['הקולוסיאום',41.8902,12.4922],['הפורום הרומי',41.8925,12.4853],['מזרקת טרווי',41.9009,12.4833],['הפנתיאון',41.8986,12.4769]]},
- {stops:[['הוותיקן',41.9065,12.4536],["טירת סנט אנג'לו",41.9031,12.4663],['פיאצה נבונה',41.8992,12.4731]]},
- {stops:[['גני בורגזה',41.9128,12.4852],['המדרגות הספרדיות',41.9060,12.4828],['טרסטוורה',41.8897,12.4694]]}],
- hotel:['המלון',41.9009,12.4950]};
-var TRACKS=[
- ['שמח וקליל',[['ukulele','Happy Whistling Ukulele','Kevin MacLeod'],['ukulele2','Ukulele Song',''],['funshine','Funshine','Kevin MacLeod'],['sun','Adding the Sun','Kevin MacLeod'],['city','City Sunshine','Kevin MacLeod'],['family','Fancy Family','Rafael Krux'],['tarantella','Village Tarantella','Kevin MacLeod']]],
- ['הרפתקה',[['notebook','Travelers Notebook',''],['north','Trip Up North','Bryan Teoh'],['hopeful','Hopeful','Rafael Krux'],['celebrate','Celebration','Alexander Nakarada']]],
- ['רגוע',[['piano','Lovely Piano Song',''],['sunflower','Champ de tournesol','Komiku']]],
- ['ים וחופשה',[['rasta','Sunny Rasta','Alexander Nakarada'],['pinacolada','Piña Colada','Alexander Nakarada']]],
- ['אווירה מקומית',[['venice','Night in Venice','Kevin MacLeod · איטליה'],['baguette','Le Baguette','Alexander Nakarada · צרפת']]]];
-var $=function(id){return document.getElementById(id)};
-var photos=[];          // {img, time}
-var track='ukulele', buffers={}, actx=null, previewSrc=null, previewId='';
-var dayOf=[];           // per photo: [dayIndex, stopIndex]
-
-// ---------- photos ----------
-function exifDate(buf){
-  try{var v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return 0;var o=2;
-    while(o<v.byteLength-4){var m=v.getUint16(o);if(m===0xFFE1){var s=o+10;if(v.getUint32(o+4)!==0x45786966)return 0;
-        var le=v.getUint16(s)===0x4949,g16=function(p){return v.getUint16(p,le)},g32=function(p){return v.getUint32(p,le)};
-        var str=function(p,n){var r='';for(var i=0;i<n;i++){var c=v.getUint8(p+i);if(!c)break;r+=String.fromCharCode(c)}return r};
-        var ifd=function(p,want){var n=g16(s+p);for(var i=0;i<n;i++){var e=s+p+2+i*12;if(g16(e)===want)return e}return 0};
-        var e=ifd(g32(s+4),0x8769),dt='';
-        if(e){var e2=ifd(g32(e+8),0x9003);if(e2)dt=str(s+g32(e2+8),19)}
-        if(!dt){var e3=ifd(g32(s+4),0x0132);if(e3)dt=str(s+g32(e3+8),19)}
-        var mm=/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d)/.exec(dt);return mm?new Date(+mm[1],mm[2]-1,+mm[3],+mm[4],+mm[5]).getTime():0}
-      if((m&0xFF00)!==0xFF00)return 0;o+=2+v.getUint16(o+2)}
-  }catch(e){}return 0}
-function shrink(src,w,h){var k=Math.min(1,1440/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c}
-async function loadFile(f){
-  var buf=await f.slice(0,262144).arrayBuffer(),t=exifDate(buf);
-  var bmp=await createImageBitmap(f);var c=shrink(bmp,bmp.width,bmp.height);bmp.close&&bmp.close();
-  return {img:c,time:t,order:f.lastModified||0}}
-$('files').addEventListener('change',async function(e){
-  var fs=[].slice.call(e.target.files||[]).slice(0,30);if(!fs.length)return;
-  $('days').innerHTML='<p class="muted">טוען תמונות…</p>';photos=[];
-  for(var i=0;i<fs.length;i++){try{photos.push(await loadFile(fs[i]))}catch(err){}}
-  if(!photos.length){$('days').innerHTML='<p class="err">לא הצלחתי לפתוח את התמונות. נסו לבחור קבצי JPG.</p>';return}
-  afterPhotos(false)});
-$('demo').addEventListener('click',function(){photos=[];for(var i=0;i<14;i++)photos.push({img:demoImg(i),time:0,order:i});afterPhotos(true)});
-function demoImg(i){
-  var c=document.createElement('canvas');c.width=1080;c.height=1440;var x=c.getContext('2d');
-  var hues=[200,28,340,180,45,260,15,190,320,95,210,35,0,170],h=hues[i%hues.length];
-  var g=x.createLinearGradient(0,0,0,1440);g.addColorStop(0,'hsl('+h+',70%,72%)');g.addColorStop(1,'hsl('+((h+40)%360)+',60%,88%)');x.fillStyle=g;x.fillRect(0,0,1080,1440);
-  x.fillStyle='hsla(45,100%,70%,.9)';x.beginPath();x.arc(780-i*23%300,330+(i*37)%160,110,0,7);x.fill();
-  for(var L=0;L<3;L++){x.fillStyle='hsl('+((h+150+L*20)%360)+','+(35+L*10)+'%,'+(55-L*13)+'%)';x.beginPath();x.moveTo(0,900+L*140);
-    for(var px=0;px<=1080;px+=60)x.lineTo(px,860+L*150+Math.sin(px/170+i+L*2)*60);x.lineTo(1080,1440);x.lineTo(0,1440);x.fill()}
-  x.fillStyle='hsl('+((h+190)%360)+',25%,22%)';
-  for(var b=0;b<7;b++){var bw=90+(b*53+i*31)%90,bh=160+(b*97+i*41)%320,bx=b*160+(i*17)%60;x.fillRect(bx,1180-bh,bw,bh+300);
-    x.fillStyle='hsla(48,100%,75%,.85)';for(var wy=1200-bh;wy<1150;wy+=46)for(var wx=bx+14;wx<bx+bw-20;wx+=34)if((wx+wy+i)%3)x.fillRect(wx,wy,14,20);x.fillStyle='hsl('+((h+190)%360)+',25%,22%)'}
-  x.fillStyle='rgba(255,255,255,.85)';x.font='700 54px Rubik, Assistant, sans-serif';x.textAlign='center';x.fillText('תמונה לדוגמה '+(i+1),540,170);
-  return c}
-function assign(){
-  var nd=TRIP.days.length,dated=photos.filter(function(p){return p.time}).length>=photos.length/2;
-  var idx=photos.map(function(p,i){return i});
-  idx.sort(function(a,b){var A=photos[a],B=photos[b];return dated?((A.time||Infinity)-(B.time||Infinity)):(A.order-B.order)});
-  photos=idx.map(function(i){return photos[i]});
-  var day=[];
-  if(dated){var keys=[];photos.forEach(function(p){var k=p.time?new Date(p.time).toDateString():keys[keys.length-1]||'x';if(keys.indexOf(k)<0)keys.push(k);day.push(Math.min(nd-1,Math.round(keys.indexOf(k)*(keys.length>nd?(nd-1)/(keys.length-1):1))))})}
-  else photos.forEach(function(p,i){day.push(Math.min(nd-1,Math.floor(i*nd/photos.length)))});
-  dayOf=[];for(var d=0;d<nd;d++){var mine=[];day.forEach(function(v,i){if(v===d)mine.push(i)});var ns=TRIP.days[d].stops.length;
-    mine.forEach(function(pi,k){dayOf[pi]=[d,Math.min(ns-1,Math.floor(k*ns/mine.length))]})}
-  return dated}
-function afterPhotos(demo){
-  var dated=assign();$('thumbs').innerHTML='';
-  photos.forEach(function(p){var c=document.createElement('canvas');c.width=128;c.height=128;var x=c.getContext('2d'),s=Math.max(128/p.img.width,128/p.img.height);
-    x.drawImage(p.img,(128-p.img.width*s)/2,(128-p.img.height*s)/2,p.img.width*s,p.img.height*s);$('thumbs').appendChild(c)});
-  var html=TRIP.days.map(function(d,i){var n=dayOf.filter(function(v){return v&&v[0]===i}).length;return '<div><b>יום '+(i+1)+'</b><span>'+n+' תמונות</span></div>'}).join('');
-  html+='<p class="muted">'+(demo?'תמונות לדוגמה, מחולקות שווה בין הימים.':dated?'חולקו לפי תאריך הצילום. השיוך למקום בתוך היום הוא לפי הסדר, ולכן משוער.':'לא נמצא תאריך צילום, אז התמונות חולקו שווה בשווה לפי הסדר.')+'</p>';
-  $('days').innerHTML=html;$('make').disabled=false}
-
-// ---------- music ----------
-function ctx(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();return actx}
-async function getBuf(id){if(buffers[id])return buffers[id];var r=await fetch('/music/'+id+'.mp3');if(!r.ok)throw new Error('music');var ab=await r.arrayBuffer();
-  buffers[id]=await new Promise(function(ok,no){ctx().decodeAudioData(ab,ok,no)});return buffers[id]}
-function stopPreview(){if(previewSrc){try{previewSrc.stop()}catch(e){}previewSrc=null}previewId='';paintTracks()}
-async function preview(id){var was=previewId;stopPreview();if(was===id)return;previewId=id;paintTracks();
-  try{var b=await getBuf(id);if(previewId!==id)return;var s=ctx().createBufferSource();s.buffer=b;s.connect(ctx().destination);s.start();s.onended=function(){if(previewSrc===s){previewSrc=null;previewId='';paintTracks()}};previewSrc=s}
-  catch(e){previewId='';paintTracks()}}
-function paintTracks(){
-  $('tracks').innerHTML=TRACKS.map(function(g){return '<div class="group"><h3>'+g[0]+'</h3>'+g[1].map(function(t){
-    return '<div class="track'+(t[0]===track?' on':'')+'"><button class="pick" type="button" data-pick="'+t[0]+'" aria-pressed="'+(t[0]===track)+'"><span>'+t[1]+(t[2]?'<br><small>'+t[2]+'</small>':'')+'</span></button>'+
-      '<button class="play" type="button" data-play="'+t[0]+'" aria-label="'+(previewId===t[0]?'עצירה':'השמעה')+' '+t[1]+'">'+(previewId===t[0]?'■':'▶')+'</button></div>'}).join('')+'</div>'}).join('')}
-$('tracks').addEventListener('click',function(e){var p=e.target.closest('[data-pick]'),q=e.target.closest('[data-play]');
-  if(p){track=p.dataset.pick;paintTracks()}if(q)preview(q.dataset.play)});
-paintTracks();
-
-// ---------- timeline ----------
-function plan(){
-  var sc=[],t=0,add=function(o,n){o.t0=t;o.len=n;sc.push(o);t+=n};
-  add({k:'intro'},3.4);
-  TRIP.days.forEach(function(day,d){add({k:'day',d:d},3.2);photos.forEach(function(p,i){if(dayOf[i]&&dayOf[i][0]===d)add({k:'photo',p:p,i:i,d:d,s:dayOf[i][1]},2.7)})});
-  add({k:'outro'},3.8);return {sc:sc,len:t}}
-var X=0.6; // crossfade seconds
-function ease(x){return x<0?0:x>1?1:x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
-function cover(x,img,zoom,px,py){var s=Math.max(W/img.width,H/img.height)*zoom,w=img.width*s,h=img.height*s;x.drawImage(img,(W-w)/2+px*(w-W)/2,(H-h)/2+py*(h-H)/2,w,h)}
-function text(x,s,px,py,font,col,al){x.font=font;x.fillStyle=col;x.textAlign=al||'center';x.direction='rtl';x.fillText(s,px,py)}
-var SEA='#0B7A8C',SUN='#F2B01E',INK='#12303A',PAPER='#EEF4F5';
-function drawScene(x,o,u){ // u = 0..1 progress in scene
-  var B=x.globalAlpha;
-  if(o.k==='photo'){var z=1.04+.10*u,dir=o.i%2?1:-1;cover(x,o.p.img,z,dir*(u-.5)*.6,(o.i%3-1)*.3*(u-.5));
-    var g=x.createLinearGradient(0,H*.62,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.62)');x.fillStyle=g;x.fillRect(0,H*.6,W,H*.4);
-    x.globalAlpha=B*ease((u-.08)/.25);
-    text(x,TRIP.days[o.d].stops[o.s][0],W-56,H-150,'800 54px Rubik, Assistant, sans-serif','#fff','right');
-    text(x,'יום '+(o.d+1)+' · '+TRIP.dest,W-56,H-98,'600 30px Assistant, sans-serif','rgba(255,255,255,.85)','right');
-    return}
-  if(o.k==='intro'||o.k==='outro'){
-    var bg=photos[o.k==='intro'?0:photos.length-1].img;x.save();x.filter='blur(6px) brightness(.55)';cover(x,bg,1.15+.06*u,0,0);x.restore();
-    x.fillStyle='rgba(11,122,140,.35)';x.fillRect(0,0,W,H);
-    var a1=ease(u/.3),a2=ease((u-.15)/.3);
-    if(o.k==='intro'){x.globalAlpha=B*a1;text(x,TRIP.dest,W/2,H/2-10+(1-a1)*30,'800 150px Rubik, Assistant, sans-serif','#fff');
-      x.globalAlpha=B*a2;text(x,TRIP.dates+' · '+TRIP.days.length+' ימים',W/2,H/2+80,'600 40px Assistant, sans-serif','rgba(255,255,255,.92)')}
-    else{var nst=TRIP.days.reduce(function(s,d){return s+d.stops.length},0);
-      x.globalAlpha=B*a1;text(x,TRIP.dest,W/2,H/2-120,'800 110px Rubik, Assistant, sans-serif','#fff');
-      x.globalAlpha=B*a2;[[TRIP.days.length,'ימים'],[nst,'מקומות'],[photos.length,'תמונות']].forEach(function(r,i){var cx=W/2+(1-i)*200;
-        text(x,String(r[0]),cx,H/2+10,'800 76px Rubik, Assistant, sans-serif',SUN);text(x,r[1],cx,H/2+56,'600 30px Assistant, sans-serif','#fff')});
-      x.globalAlpha=B*ease((u-.35)/.3);text(x,'תוכנן ב-HaniaGo',W/2,H-210,'700 38px Rubik, Assistant, sans-serif','#fff');
-      text(x,'go.hania360.com',W/2,H-160,'600 28px Assistant, sans-serif','rgba(255,255,255,.8)')}
-    return}
-  if(o.k==='day')drawDay(x,o.d,u,B)}
-function drawDay(x,d,u,B){
-  x.fillStyle=PAPER;x.fillRect(0,0,W,H);
-  var all=[TRIP.hotel].concat(TRIP.days[d].stops);
-  var la=all.map(function(p){return p[1]}),lo=all.map(function(p){return p[2]});
-  var mnla=Math.min.apply(0,la),mxla=Math.max.apply(0,la),mnlo=Math.min.apply(0,lo),mxlo=Math.max.apply(0,lo);
-  var box={x:70,y:330,w:W-140,h:720},k=Math.cos(41.9*Math.PI/180),sx=box.w/((mxlo-mnlo)*k||1),sy=box.h/((mxla-mnla)||1),s=Math.min(sx,sy)*.78;
-  var cx=(mnlo+mxlo)/2,cy=(mnla+mxla)/2,P=function(p){return [box.x+box.w/2-(cx-p[2])*k*s,box.y+box.h/2+(cy-p[1])*s]};
-  // map card
-  x.fillStyle='#fff';roundRect(x,box.x-20,box.y-20,box.w+40,box.h+40,36);x.fill();
-  x.save();roundRect(x,box.x-20,box.y-20,box.w+40,box.h+40,36);x.clip();
-  x.strokeStyle='#E3ECEE';x.lineWidth=2;for(var gx=box.x-20;gx<box.x+box.w+20;gx+=48){x.beginPath();x.moveTo(gx,box.y-20);x.lineTo(gx+30,box.y+box.h+20);x.stroke()}
-  for(var gy=box.y-20;gy<box.y+box.h+20;gy+=56){x.beginPath();x.moveTo(box.x-20,gy);x.lineTo(box.x+box.w+20,gy-14);x.stroke()}
-  // other days faint
-  TRIP.days.forEach(function(dd,j){if(j===d)return;dd.stops.forEach(function(p){var q=P(p);if(q[0]<box.x-20||q[0]>box.x+box.w+20||q[1]<box.y-20||q[1]>box.y+box.h+20)return;x.fillStyle='#C9D7DB';x.beginPath();x.arc(q[0],q[1],10,0,7);x.fill()})});
-  var pts=[TRIP.hotel].concat(TRIP.days[d].stops).map(P),prog=ease((u-.12)/.6)*(pts.length-1);
-  x.strokeStyle=SEA;x.lineWidth=11;x.lineCap='round';x.lineJoin='round';x.setLineDash([2,22]);x.beginPath();x.moveTo(pts[0][0],pts[0][1]);
-  for(var i=1;i<pts.length;i++){var f=Math.max(0,Math.min(1,prog-(i-1)));if(f<=0)break;x.lineTo(pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f)}
-  x.stroke();x.setLineDash([]);
-  // hotel
-  x.fillStyle=INK;x.beginPath();x.arc(pts[0][0],pts[0][1],16,0,7);x.fill();text(x,'H',pts[0][0],pts[0][1]+8,'800 22px Rubik, sans-serif','#fff');
-  for(i=1;i<pts.length;i++){var on=prog>=i-1+.85,sc=on?1:0;if(!on)continue;
-    x.fillStyle=SEA;x.beginPath();x.arc(pts[i][0],pts[i][1],30*sc,0,7);x.fill();text(x,String(i),pts[i][0],pts[i][1]+11,'800 32px Rubik, sans-serif','#fff')}
-  x.restore();
-  // header + list
-  x.globalAlpha=B*ease(u/.25);
-  text(x,'יום '+(d+1),W-70,190,'800 96px Rubik, Assistant, sans-serif',SEA,'right');
-  text(x,TRIP.dest+' · '+TRIP.days[d].stops.length+' מקומות',W-70,250,'600 34px Assistant, sans-serif',INK,'right');
-  x.globalAlpha=B;
-  TRIP.days[d].stops.forEach(function(p,j){x.globalAlpha=B*ease((u-.2-j*.1)/.2);var yy=1135+j*44;
-    x.fillStyle=SEA;x.beginPath();x.arc(W-86,yy-10,16,0,7);x.fill();text(x,String(j+1),W-86,yy-2,'800 20px Rubik, sans-serif','#fff');
-    text(x,p[0],W-116,yy,'600 32px Assistant, sans-serif',INK,'right')})}
-function roundRect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
-function frame(x,pl,t){
-  x.globalAlpha=1;x.fillStyle='#000';x.fillRect(0,0,W,H);
-  for(var i=0;i<pl.sc.length;i++){var o=pl.sc[i];if(t<o.t0||t>=o.t0+o.len+X)continue;
-    var u=Math.min(1,(t-o.t0)/(o.len+X));x.globalAlpha=1;
-    if(i>0&&t<o.t0+X)x.globalAlpha=ease((t-o.t0)/X);
-    x.save();drawScene(x,o,u);x.restore()}
-  x.globalAlpha=1}
-
-// ---------- recording ----------
-var outURL='',outFile=null,wake=null;
-function pickMime(){var c=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1,mp4a','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
-  for(var i=0;i<c.length;i++)if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(c[i]))return c[i];return ''}
-$('make').addEventListener('click',make);$('again').addEventListener('click',make);
-async function make(){
-  stopPreview();$('make').disabled=true;$('done').hidden=true;$('out').hidden=true;$('fmt').textContent='';
-  var cv=$('cv'),x=cv.getContext('2d');cv.hidden=false;$('prog').hidden=false;$('progt').textContent='מכין…';$('bari').style.width='0';
-  try{await Promise.all([document.fonts.load('800 60px Rubik'),document.fonts.load('600 30px Assistant')])}catch(e){}
-  if(!window.MediaRecorder||!cv.captureStream){$('progt').innerHTML='<span class="err">הדפדפן הזה לא יודע להקליט וידאו. נסו בכרום.</span>';$('make').disabled=false;return}
-  var pl=plan(),buf;
-  try{buf=await getBuf(track)}catch(e){$('progt').innerHTML='<span class="err">המוזיקה לא נטענה. בדקו חיבור ונסו שוב.</span>';$('make').disabled=false;return}
-  var ac=ctx(),dest=ac.createMediaStreamDestination(),gain=ac.createGain(),src=ac.createBufferSource();
-  src.buffer=buf;src.loop=buf.duration<pl.len+1;src.connect(gain);gain.connect(dest);gain.connect(ac.destination);
-  var stream=new MediaStream([cv.captureStream(FPS).getVideoTracks()[0],dest.stream.getAudioTracks()[0]]);
-  var mime=pickMime(),chunks=[],rec;
-  try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:5e6,audioBitsPerSecond:128e3}:{})}catch(e){rec=new MediaRecorder(stream)}
-  rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
-  try{wake=await navigator.wakeLock.request('screen')}catch(e){}
-  frame(x,pl,0);
-  var a0=ac.currentTime+0.05;src.start(a0);gain.gain.setValueAtTime(1,a0);gain.gain.setValueAtTime(1,a0+pl.len-1.6);gain.gain.linearRampToValueAtTime(0,a0+pl.len);
-  rec.start(500);var t0=performance.now()+50;
-  await new Promise(function(done){
-    (function tick(){var t=(performance.now()-t0)/1000;frame(x,pl,Math.max(0,Math.min(t,pl.len-0.01)));
-      $('bari').style.width=Math.min(100,t/pl.len*100)+'%';$('progt').textContent='מקליט… '+Math.max(0,Math.ceil(pl.len-t))+' שניות';
-      if(t>=pl.len+0.2)done();else requestAnimationFrame(tick)})()});
-  await new Promise(function(ok){rec.onstop=ok;rec.stop()});
-  try{src.stop()}catch(e){}try{wake&&wake.release()}catch(e){}
-  var type=(rec.mimeType||mime||'video/webm').split(';')[0],ext=type.indexOf('mp4')>=0?'mp4':'webm';
-  var blob=new Blob(chunks,{type:type});if(outURL)URL.revokeObjectURL(outURL);outURL=URL.createObjectURL(blob);
-  outFile=new File([blob],'haniago-'+TRIP.dest+'.'+ext,{type:type});
-  cv.hidden=true;$('prog').hidden=true;var v=$('out');v.src=outURL;v.hidden=false;
-  $('save').href=outURL;$('save').download=outFile.name;$('done').hidden=false;$('make').disabled=false;
-  $('share').hidden=!(navigator.canShare&&navigator.canShare({files:[outFile]}));
-  $('fmt').textContent='פורמט: '+ext.toUpperCase()+' · '+(blob.size/1048576).toFixed(1)+' MB · '+Math.round(pl.len)+' שניות'+(ext==='webm'?'. קובץ WEBM לא תמיד נפתח בוואטסאפ ובאייפון.':'')}
-$('share').addEventListener('click',function(){if(outFile&&navigator.share)navigator.share({files:[outFile],title:'הטיול ל'+TRIP.dest}).catch(function(){})});
-})();
-</script>
+<script src="video.js"></script>
 </body>
 </html>

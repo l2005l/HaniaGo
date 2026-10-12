@@ -151,7 +151,7 @@ async function postClick(req, env) {
 }
 
 /* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
-const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'ics', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_page', 'src_other'];
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'ics', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_page', 'src_video', 'src_other', 'video_make', 'video_share'];
 async function postEvent(req, env) {
   const b = await req.json().catch(() => null), e = str(b && b.e, 30);
   if (!EVENTS.includes(e)) return bad('event');
@@ -443,6 +443,25 @@ async function searchPlace(env, q, city, la, lo) {
   await cachePut(env, k, out, (out.found ? 90 : 1) * 864e5);
   return out;
 }
+/* ---- what is at a photo's coordinates: a place name for the trip video, cached ---- */
+export function mapWhere(j) {
+  if (!j || j.error) return { found: false };
+  const a = j.address || {}, city = a.city || a.town || a.village || a.municipality || a.county || '';
+  const airport = j.category === 'aeroway' || !!a.aeroway;
+  const name = (airport ? a.aeroway || j.name : j.name) || a.tourism || a.attraction || a.historic || a.leisure || a.amenity || a.suburb || a.neighbourhood || a.quarter || a.road || city;
+  return { found: !!(name || city), name: String(name || '').slice(0, 60), city: String(city).slice(0, 60), country: String(a.country || '').slice(0, 40), cc: String(a.country_code || '').toUpperCase().slice(0, 2), airport };
+}
+async function getWhere(req, env, url) {
+  const la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo'));
+  if (la == null || lo == null || Math.abs(la) > 90 || Math.abs(lo) > 180) return json({ found: false }, 400);
+  const k = 'wh1:' + la.toFixed(3) + ',' + lo.toFixed(3), hit = await cacheGet(env, k); if (hit) return json(hit);
+  if (await bump(env, 'geo:' + today()) > 2000) return json({ found: false, reason: 'limit' });
+  let j = null;
+  try { const r = await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=' + la.toFixed(5) + '&lon=' + lo.toFixed(5), { headers: { 'user-agent': 'HaniaGo/1.0 (https://go.hania360.com)', 'accept-language': 'he,en' } }); j = r.ok ? await r.json() : null; } catch { j = null; }
+  const out = mapWhere(j);
+  if (j) await cachePut(env, k, out, 180 * 864e5);
+  return json(out);
+}
 async function getGeo(req, env, url) {
   const link = str(url.searchParams.get('link'), 600), city = str(url.searchParams.get('city'), 60), la = num(url.searchParams.get('la')), lo = num(url.searchParams.get('lo'));
   if (link) {
@@ -481,7 +500,7 @@ async function postNotes(req, env) {
 const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'POST /api/share': postShare, 'GET /api/share': getShare, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
-  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
+  'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/where': getWhere, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
 };
 export { NOTES };
 export default {
