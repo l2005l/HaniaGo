@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { dueMessage, ilNow, vapidHeader, okEndpoint, cleanTrip } from '../src/push.js';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage, mapWhere, prebuild, runReminders } from '../src/worker.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage, mapWhere, prebuild, runReminders, mapNomCity } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
@@ -357,4 +357,25 @@ test('the destination list says which places are ready, and the hourly job build
   env.DB.raw.exec('DELETE FROM cache');
   l = (await (await call(env, 'GET', '/api/destlist')).json()).list;
   assert.equal(l.find((x) => x.n === 'לונדון').ready, true);
+});
+
+test('a misspelled destination is resolved to real places only, with Israel told apart', async () => {
+  const real = globalThis.fetch;
+  const tp = { 'yerevan': [{ name: 'Yerevan', code: 'EVN', country_name: 'Armenia', coordinates: { lat: 40.18, lon: 44.51 } }], 'ירושלים': [{ name: 'ירושלים', code: 'JRS', country_name: 'ישראל', coordinates: { lat: 31.77, lon: 35.21 } }] };
+  globalThis.fetch = async (u) => { u = String(u);
+    if (u.includes('travelpayouts')) { const t = new URL(u).searchParams.get('term').toLowerCase(); return new Response(JSON.stringify(tp[t] || [])); }
+    return new Response('[]'); };
+  try {
+    const env = { DB: fakeD1(), AI: { run: async () => ({ response: JSON.stringify({ cands: [{ he: 'ירוואן', en: 'Yerevan', country: 'Armenia' }, { he: 'עיר מומצאת', en: 'Nowhereville', country: 'Nowhere' }] }) }) } };
+    const r = await (await call(env, 'GET', '/api/resolve?q=' + encodeURIComponent('ירבאן'))).json();
+    assert.equal(r.guessed, true); assert.equal(r.cands.length, 1, 'the invented place is dropped');
+    assert.deepEqual([r.cands[0].code, r.cands[0].il], ['EVN', 0]);
+    const j = await (await call(env, 'GET', '/api/resolve?q=' + encodeURIComponent('ירושלים'))).json();
+    assert.equal(j.cands[0].il, 1); assert.equal(j.cands[0].code, '');
+    const none = await (await call({ DB: fakeD1(), AI: { run: async () => ({ response: '{"cands":[]}' }) } }, 'GET', '/api/resolve?q=qqqq')).json();
+    assert.deepEqual(none.cands, []);
+  } finally { globalThis.fetch = real; }
+  assert.equal(mapNomCity([{ lat: '40.1', lon: '44.5', addresstype: 'city', name: 'Երևան', namedetails: { 'name:he': 'ירוואן', 'name:en': 'Yerevan' }, address: { country: 'ארמניה', country_code: 'am' } }])[0].n, 'ירוואן');
+  const d = cleanDest({ n: 'ירוואן', at: [[40.18, 44.51], [40.2, 44.5], [40.1, 44.6], [29.55, 34.95]].map((c, i) => ({ n: 'מקום ' + i, la: c[0], lo: c[1] })) }, { ab: true, la: 40.18, lo: 44.51 });
+  assert.equal(d.at.length, 3, 'a place 1,000 km away is dropped'); assert.equal(d.abroad, 1);
 });
