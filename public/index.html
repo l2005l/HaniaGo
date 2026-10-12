@@ -347,13 +347,13 @@ function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d
  function meal(name,a,c,note){add(t,name,note,(a*p.a+c*p.c)*fx,'אוכל');t+=60}
  if(i===0){t=900;add(t,'צ׳ק אין ב'+d.hotel.n,'משאירים מזוודות ומתארגנים');t+=45}
  else{add(480,'קמים');add(510,'ארוחת בוקר במלון','אם היא כלולה בהזמנה');t=555}
- if(!st.length&&i>0&&i<n-1){add(t,'זמן חופשי','בריכה, קניות או מנוחה');t=780;meal('ארוחת צהריים',55,35,'הערכה למשפחה')}
+ if(!st.length&&i>0&&i<n-1){add(t,'זמן חופשי','בריכה, קניות או מנוחה');t=780;meal('ארוחת צהריים',55,35,(hasKids()?'הערכה למשפחה':'הערכה'))}
  st.forEach(function(s){leg(s,s.n);add(t,s.n,'כשעתיים במקום',s.small?0:s.a*p.a+s.c*p.c,'אטרקציות',s);t+=120;
-  if(!lunch&&t>=720){lunch=true;meal('ארוחת צהריים באזור',55,35,'הערכה למשפחה')}});
- if(st.length&&!lunch&&i<n-1){t=Math.max(t,720);meal('ארוחת צהריים באזור',55,35,'הערכה למשפחה')}
+  if(!lunch&&t>=720){lunch=true;meal('ארוחת צהריים באזור',55,35,(hasKids()?'הערכה למשפחה':'הערכה'))}});
+ if(st.length&&!lunch&&i<n-1){t=Math.max(t,720);meal('ארוחת צהריים באזור',55,35,(hasKids()?'הערכה למשפחה':'הערכה'))}
  if(st.length)leg(d.hotel,'המלון');
  if(i===n-1){add(Math.max(t,660),'אוספים מזוודות ויוצאים '+(legNext()?'ל'+legNext().n:d.abroad?'לשדה התעופה':'הביתה'))}
- else{if(t<1110&&i>0)add(t,'מנוחה במלון','זמן שקט לקטנים');t=Math.max(t+30,1140);meal('ארוחת ערב ליד המלון',80,50,'הערכה למשפחה');add(t+15,'חזרה למלון, סוף היום')}
+ else{if(t<1110&&i>0)add(t,'מנוחה במלון',hasKids()?'זמן שקט לקטנים':'הפסקה קצרה לפני הערב');t=Math.max(t+30,1140);meal('ארוחת ערב ליד המלון',80,50,(hasKids()?'הערכה למשפחה':'הערכה'));add(t+15,'חזרה למלון, סוף היום')}
  return it}
 function tlCost(it){return it.reduce(function(s,x){return s+x.cost},0)}
 function planSnap(days){if(multi()&&!PLSNAP){PLSNAP=1;try{var dd=[],d0=null;eachLeg(function(i){var ds=dayOptions().map(function(x){return ((x.chosen&&x.chosen.stops)||[]).filter(function(st){return !st.own&&st.la!=null}).map(function(st){return [st.n,+st.la,+st.lo]})});if(i===0)d0=D();if(i>0&&dd.length){var lastDay=dd.pop();ds[0]=lastDay.concat(ds[0])}dd=dd.concat(ds)});localStorage.setItem('haniago_plan',JSON.stringify({dest:legNames(),abroad:!!d0.abroad,date:tripStart(),nights:tripNights(),hotel:[d0.hotel.n,d0.hotel.la,d0.hotel.lo],days:dd}))}catch(e){}PLSNAP=0;return}if(PLSNAP)return;try{var d=D();localStorage.setItem('haniago_plan',JSON.stringify({dest:d.n,abroad:!!d.abroad,date:S.date,nights:nights(),hotel:[d.hotel.n,d.hotel.la,d.hotel.lo],
@@ -377,7 +377,7 @@ function vPlan(){var d=D(),days=dayOptions(),p=pax();loadWx();planSnap(days);
      +(s.small?'<p class="warn">הצעיר במשפחה מתחת לגיל המומלץ. לא נכלל בעלות.</p>':'')+(s.adv&&!(S.tix||{})[s.n]?'<p class="warn">כדאי להזמין כרטיסים מראש, הם נגמרים.</p>':'')
      +tipsHtml(s,d)
      +offersHtml(s)+stopExtra(s,d)+'</div>';
- html+='</div></div>'});html+='</div>'}
+ html+='</div></div>'});html+='</div>'+eveningHtml(d,i)}
    html+='<div class="sp" style="align-items:center"><span class="num">'+(tot?nis(tot)+' ליום, כולל אוכל ותחבורה':'ללא עלות')+'</span><button data-opt="'+i+':'+o.k+'" class="'+(on?'on':'')+'">'+(on?'נבחר':'בחירה')+'</button></div></div>'})});
  return html+'<div class="row">'+'<button class="grow" data-act="pday" data-i="'+(cur-1)+'">'+(cur===0?'חזרה להכנות':'ליום הקודם')+'</button>'+(cur<n-1?'<button class="pri grow" data-act="pok" data-i="'+cur+'">אישור והמשך ליום '+(cur+2)+'</button>':'<button class="pri grow" data-act="pok" data-i="'+cur+'" data-last="1">'+(legNext()?'אישור והמשך ל'+esc(legNext().n):'אישור והמשך לתקציב')+'</button>')+'</div>'}
 var WX={k:'',r:null},PH={};try{PH=JSON.parse(localStorage.getItem('haniago_ph')||'{}')||{}}catch(e){}
@@ -908,6 +908,21 @@ function dlHtml(q){q=String(q||'').trim();var L=dlItems().map(function(x,i){retu
 function dlPick(i){var x=dlItems()[i];if(!x)return;S.destPicked=true;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];SHEET=null;return render(1)}
  var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';SHEET=null;render(1);return}
  mkDest(x.il?{name:x.n,il:true}:{name:x.n,code:x.code,abroad:true})}
+/* ---- after 20:00: an optional evening that fits who is traveling ---- */
+function crowd(){var ages=S.fam.map(function(m){return +m.a||0}),y=Math.min.apply(null,ages),avg=ages.reduce(function(t,a){return t+a},0)/Math.max(1,ages.length);return y<12?'kids':y<16?'teens':avg<=32?'young':'adults'}
+function eveningHtml(d,i){if(legNext&&legNext()&&i===nights())return '';var n=nights(),c=crowd();if(i===n)return '';
+ var near=d.hotel,mq=function(q){return 'https://www.google.com/maps/search/'+encodeURIComponent(q)+'/@'+near.la+','+near.lo+',14z?hl=iw'},en=enName(d),he=!d.abroad;
+ var gyg='https://www.stay22.com/allez/getyourguide?aid='+STAY_AID+'&campaign=evening&address='+encodeURIComponent(en);
+ var own=picks().filter(function(x){return /ערב|לילה|בר|ברים|מועדון|טיילת|מרינה/.test(x.n)&&!x.small}).slice(0,2);
+ var O={young:[['ברים ומסיבות','האזורים החיים בערב, לפי הדירוג במפות',mq(he?'בר':'bars nightlife')],['מועדונים','בדרך כלל מתחילים אחרי חצות. כדאי לבדוק אירועים ותנאי כניסה',mq(he?'מועדון':'nightclub')],['סיור לילי או סיור ברים','דרך טובה להכיר אנשים ואת העיר בלילה',gyg,1]],
+  adults:[['ארוחת ערב עם נוף','מסעדות מומלצות באזור',mq(he?'מסעדה עם נוף':'restaurant with a view')],['סיור לילי','סיור מודרך או שיט ערב',gyg,1],['בר יין או קוקטיילים','לסיום רגוע של היום',mq(he?'בר יין':'wine bar')]],
+  teens:[['טיילת וגלידה','הליכה קצרה ליד המלון',mq(he?'גלידה':'gelato ice cream')],['מופע או סיור ערב','שווה לבדוק מה יש בתאריך הזה',gyg,1]],
+  kids:[['גלידה וטיול קצר','לסיים את היום בנחת ליד המלון',mq(he?'גלידה':'gelato ice cream')],['מופע ערב למשפחות','לבדוק מראש שעות וגילים',gyg,1]]}[c];
+ var title={young:'ממשיכים בלילה? ברים, מסיבות וסיורי לילה',adults:'ממשיכים לערב? ארוחה, סיור לילי או בר',teens:'המשך לערב: טיילת, גלידה או מופע',kids:'המשך לערב רגוע'}[c];
+ return '<details class="stop fold"'+(c==='young'?' open':'')+'><summary><b>'+title+'</b><i class="pm" aria-hidden="true"></i></summary>'
+  +own.map(function(x){return '<p><b>'+esc(x.n)+'</b> <span class="note">· '+esc(x.rec||'')+'</span></p>'}).join('')
+  +O.map(function(o){return '<div class="sp" style="align-items:center;gap:8px"><span><b>'+o[0]+'</b><br><span class="note">'+o[1]+'</span></span><a class="btn" style="flex:none;min-height:40px"'+(o[3]?' data-partner="gyg"':'')+' target="_blank" rel="noopener" href="'+esc(o[2])+'">'+(o[3]?'סיורים':'במפה')+'</a></div>'}).join('')
+  +'<p class="note">'+(c==='young'?'שמרו על המלון במפה ועל דרך חזרה מסודרת. ':'')+'לא נכנס לשעות ולעלות של היום.'+(O.some(function(o){return o[3]})?' סיורים: קישור שותפים, המחיר לא משתנה.':'')+'</p></details>'}
 function tixList(days){var out=[],seen={},tx=S.tix||{};(days||[]).forEach(function(day,i){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){if(s.adv&&!seen[s.n]&&!tx[s.n]){seen[s.n]=1;out.push({s:s,i:i})}})});return out}
 function tixCard(days,d){var all=[],seen={};days.forEach(function(day,i){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){if(s.adv&&!seen[s.n]){seen[s.n]=1;all.push({s:s,i:i})}})});if(!all.length)return '';var tx=S.tix||{};
  return '<div class="card" id="c-tix"><h3>כרטיסים שכדאי להזמין מראש</h3><p class="note">במקומות האלה הכרטיסים לשעות הנוחות נגמרים לפעמים ימים או שבועות לפני. מסמנים אחרי שהזמנתם.</p>'+all.map(function(o){return '<div class="stop"><div class="sp" style="align-items:center"><b>'+esc(o.s.n)+'</b><span class="note">'+dayLabel(o.i)+'</span></div><a class="btn" data-partner="tiqets" target="_blank" rel="noopener" href="'+esc(tiqetsUrl(o.s,d))+'">כרטיסים ב-Tiqets</a><label class="chk" for="tx'+o.i+'_'+esc(o.s.n)+'"><input id="tx'+o.i+'_'+esc(o.s.n)+'" type="checkbox" data-tix="'+esc(o.s.n)+'"'+(tx[o.s.n]?' checked':'')+'>הזמנתי</label></div>'}).join('')+'<p class="note">קישור שותפים: HaniaGo עשויה לקבל עמלה על הזמנה, והמחיר שלכם לא משתנה.</p></div>'}
