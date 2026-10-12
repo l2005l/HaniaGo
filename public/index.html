@@ -306,7 +306,9 @@ function timeline(i,st){var d=D(),p=pax(),pay=p.a+p.c,n=nights()+1,it=[],t,cur=d
  else{if(t<1110&&i>0)add(t,'מנוחה במלון','זמן שקט לקטנים');t=Math.max(t+30,1140);meal('ארוחת ערב ליד המלון',80,50,'הערכה למשפחה');add(t+15,'חזרה למלון, סוף היום')}
  return it}
 function tlCost(it){return it.reduce(function(s,x){return s+x.cost},0)}
-function vPlan(){var d=D(),days=dayOptions(),p=pax();loadWx();
+function planSnap(days){try{var d=D();localStorage.setItem('haniago_plan',JSON.stringify({dest:d.n,abroad:!!d.abroad,date:S.date,nights:nights(),hotel:[d.hotel.n,d.hotel.la,d.hotel.lo],
+  days:days.map(function(x){return ((x.chosen&&x.chosen.stops)||[]).filter(function(st){return !st.own&&st.la!=null}).map(function(st){return [st.n,+st.la,+st.lo]})})}))}catch(e){}}
+function vPlan(){var d=D(),days=dayOptions(),p=pax();loadWx();planSnap(days);
  var html='<h2>המסלול ב'+esc(d.n)+'</h2><p class="note">לכל יום יש כמה מסלולים שמותאמים לגילאים שהזנתם. המסלול שנבחר נפתח כיום מלא, מהבוקר עד החזרה למלון. זמני נסיעה ומחירים הם הערכה.</p>'
  +'<div class="card"><div class="sp"><h3>'+esc(d.hotel.n)+'</h3><span class="num">'+nis(d.hotel.p)+' ללילה</span></div><p class="note">'+nights()+' לילות · ניווט '+(S.car?'ברכב':'בתחבורה ציבורית')+'</p>'+navBtns(d.hotel.n,d.hotel.la,d.hotel.lo)+(d.hotel.mine?'':pLink('booking',stayUrl(d),'הזמנת מלון ב-Booking'))+'</div>';
  var n=days.length,cur=S.pday==null?-1:Math.max(-1,Math.min(n-1,+S.pday)),dn=S.pdone&&S.pdone.dest===S.dest?S.pdone.d:{};
@@ -497,7 +499,7 @@ function loadTrain(lp){var xy=HOMEXY[S.home],hn=homeNm();if(S.mode==='car'||(!xy
 function packItems(){var d=D(),y=youngest(),m=+S.date.slice(5,7),k=hasKids(),L=[],add=function(g,a){a.forEach(function(x){L.push([g,x])})},cold=d.abroad?(m>=11||m<=3):(m===12||m<=2),hot=m>=6&&m<=9;
  if(d.abroad)add('מסמכים',['דרכונים בתוקף לחצי שנה לפחות','כרטיסי טיסה ואישור הזמנת מלון','ביטוח נסיעות','כרטיס אשראי בינלאומי ומעט מזומן']);else add('מסמכים',['תעודות זהות','אישור הזמנת מלון']);
  if(S.car)add('מסמכים',d.abroad?['רישיון נהיגה, ורישיון בינלאומי אם נדרש ביעד','אישור הזמנת הרכב']:['רישיון נהיגה ורישיון רכב']);
- add('טלפון וחשמל',['מטענים וסוללת גיבוי'].concat(d.abroad?['מתאם לשקע','חבילת גלישה או eSIM','מפות להורדה מראש']:[]));
+ add('טלפון וחשמל',['מטענים וסוללת גיבוי','שמירת מיקום במצלמה (לסרטון הטיול)'].concat(d.abroad?['מתאם לשקע','חבילת גלישה או eSIM','מפות להורדה מראש']:[]));
  add('בריאות',['תרופות קבועות ומרשמים','משכך כאבים ומוריד חום','פלסטרים וחומר חיטוי']);
  if(hot||!cold)add('בריאות',['קרם הגנה וכובעים']);
  add('בגדים',cold?['מעילים, כפפות וכובע חם','נעליים סגורות ואטומות','מטרייה או מעיל גשם']:hot?['בגדים קלים ובגדי ים','נעלי הליכה נוחות','סוודר דק לערב ולמזגן']:['שכבות, קר בבוקר וחם בצהריים','נעלי הליכה נוחות','מעיל גשם דק']);
@@ -597,12 +599,13 @@ function tripCard(){var d=D(),n=daysTo();if(n===null)return '';var end=-n-nights
   if(d.abroad&&!pk['ביטוח נסיעות'])T.push(['ביטוח נסיעות','plan']);
   if(d.abroad&&n<=7&&!pk['חבילת גלישה או eSIM'])T.push(['חבילת גלישה לחו״ל','plan']);
   if(n<=7)T.push(['מעבר על רשימת הציוד','leave']);
+  if(n<=3&&!pk['שמירת מיקום במצלמה (לסרטון הטיול)'])T.push(['להפעיל שמירת מיקום בהגדרות המצלמה, כדי שבסוף ייצא סרטון עם המקומות','leave']);
   if(d.abroad&&n<=1)T.push(['צ׳ק אין והורדת כרטיסי עלייה למטוס','leave']);
   return '<div class="card sel"><div class="sp"><h3>'+(n===1?'מחר טסים':'עוד '+n+' ימים')+' ל'+esc(d.n)+'</h3><button class="x" style="color:inherit" data-act="cdoff" aria-label="הסתרה להיום">✕</button></div>'+(T.length?'<p class="note">מה שנשאר לסגור:</p>'+T.map(function(t){return '<div class="sp" style="align-items:center"><span>'+t[0]+'</span><button data-go="'+t[1]+'">'+(t[1]==='plan'?'להכנות':'לשם')+'</button></div>'}).join(''):'<p class="note">נראה שהכול סגור. נסיעה טובה.</p>')+'<button data-act="ics">הוספת תזכורות ליומן בטלפון</button></div>'}
  if(end>0&&end<=30&&S.sumOff!==S.date){var days=dayOptions(),seen={},pl=[];days.forEach(function(x){x.chosen.stops.forEach(function(st){if(!seen[st.n]&&!st.mine){seen[st.n]=1;pl.push(st.n)}})});
-  var spent=S.exp.reduce(function(t,e){return t+e.amt},0),planned=sum(costs());
+  planSnap(days);var spent=S.exp.reduce(function(t,e){return t+e.amt},0),planned=sum(costs());
   return '<div class="card sel"><div class="sp"><h3>איך היה ב'+esc(d.n)+'?</h3><button class="x" style="color:inherit" data-act="sumoff" aria-label="סגירה">✕</button></div><div class="sp"><span>תכננתם</span><span class="num">'+nis(planned)+'</span></div><div class="sp"><span>הוצאות שרשמתם בטיול</span><span class="num">'+nis(spent)+'</span></div>'+(+S.budget?'<div class="sp"><span>התקציב שהגדרתם</span><span class="num">'+nis(+S.budget)+'</span></div>':'')
-   +(pl.length?'<p class="note">טיפ קצר שלכם יעזור למשפחה הבאה. על איזה מקום?</p><div class="row">'+pl.slice(0,8).map(function(x){return '<button data-act="sumtip" data-place="'+esc(x)+'">'+esc(x)+'</button>'}).join('')+'</div>':'')+'<button class="pri" data-act="newtrip">לתכנן את הטיול הבא</button></div>'}
+   +(pl.length?'<p class="note">טיפ קצר שלכם יעזור למשפחה הבאה. על איזה מקום?</p><div class="row">'+pl.slice(0,8).map(function(x){return '<button data-act="sumtip" data-place="'+esc(x)+'">'+esc(x)+'</button>'}).join('')+'</div>':'')+'<a class="btn pri" href="/lab/video.html" style="text-decoration:none;display:flex;align-items:center;justify-content:center">סרטון מהטיול, מהתמונות שצילמתם</a><button data-act="newtrip">לתכנן את הטיול הבא</button></div>'}
  return ''}
 function newsCard(){if(SEENV===VERSION)return '';return '<div class="card sel"><div class="sp"><h3>האפליקציה התעדכנה</h3><span class="tag">גרסה '+VERSION+'</span></div><ul style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px">'+WHATSNEW.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><button data-act="newsok">הבנתי</button></div>'}
 function verLine(){return (navigator.onLine===false?'<p class="note" role="status" style="text-align:center">אין חיבור לרשת. המסלול השמור זמין, ומחירים והטבות יתעדכנו כשהחיבור יחזור.</p>':'')+'<p class="note" style="text-align:center">HaniaGo · גרסה '+VERSION+' · <a href="/d">יעדים</a> · <button data-act="newsshow" style="min-height:44px;border:0;background:none;padding:0 4px;color:inherit;text-decoration:underline;font-weight:400">מה חדש</button></p>'}

@@ -96,11 +96,11 @@ async function build(picked,demo){
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
   diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+(geo<photos.length&&!demo?' · יש שדה מיקום ריק: '+photos.filter(function(p){return p.gps&&p.lat==null}).length+' · אין שדה מיקום בכלל: '+photos.filter(function(p){return !p.gps}).length:'')+
-    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום</b>, ולכן הסרטון ייבנה לפי תאריכים בלבד.'+(fromShare?' גם בשיתוף מהגלריה המיקום לא הגיע. בדקו בהגדרות השיתוף של הגלריה שהאפשרות "הסרת מיקום" כבויה.':' כשבוחרים תמונות מתוך אתר, הטלפון מוחק את המיקום. כדי לשמור עליו: פתחו את הגלריה, סמנו את התמונות, לחצו שיתוף ובחרו HaniaGo.'):'')+span());
+    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> הסרטון ייבנה לפי תאריכי הצילום, ואם שמרתם מסלול ב-HaniaGo, גם לפי המקומות שבו. בטיול הבא כדאי להפעיל שמירת מיקום בהגדרות המצלמה.'+(fromShare?(photos.some(function(p){return p.gps})?' הגלריה הסירה את המיקום: בדקו בהגדרות השיתוף שלה שהאפשרות "הסרת מיקום" כבויה.':' המצלמה לא שמרה מיקום בתמונות האלה.'):' ייתכן שהמצלמה לא שמרה מיקום, או שהטלפון הסיר אותו כי התמונות נבחרו מתוך אתר. שיתוף מהגלריה ל-HaniaGo שומר על המיקום.'):'')+span());
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
   photos.forEach(function(p){var dk=p.time?dayKey(p.time):(cur?cur.day:'');
-    var near=cur&&cur.day===dk&&(p.lat==null||cur.la==null||km(cur.la,cur.lo,p.lat,p.lng)<0.4)&&(!p.time||!cur.last||p.time-cur.last<4*3600e3);
+    var near=cur&&cur.day===dk&&(p.lat==null||cur.la==null||km(cur.la,cur.lo,p.lat,p.lng)<0.4)&&(!p.time||!cur.last||p.time-cur.last<(p.lat==null?75*60e3:4*3600e3));
     if(!near){cur={day:dk,photos:[],la:null,lo:null,n:0,last:0};cl.push(cur)}
     cur.photos.push(p);if(p.time)cur.last=p.time;
     if(p.lat!=null){cur.la=cur.la==null?p.lat:(cur.la*cur.n+p.lat)/(cur.n+1);cur.lo=cur.lo==null?p.lng:(cur.lo*cur.n+p.lng)/(cur.n+1);cur.n++}});
@@ -110,12 +110,23 @@ async function build(picked,demo){
     var c=withGeo[k],w=await where(c.la,c.lo);c.w=w;
     c.name=w.found?(w.airport?(w.cc==='IL'?'נתב"ג':(w.name||'שדה התעופה')):(w.name||w.city)):'';c.city=w.city||'';c.cc=w.cc||'';c.airport=!!w.airport}
   diag($('diag').innerHTML.split('<br>זיהוי')[0]);
+  // 2b. the route saved in HaniaGo: its names for nearby photos, and its places for photos with no location
+  var PL=null;try{PL=JSON.parse(localStorage.getItem('haniago_plan')||'null')}catch(e){}
+  var guessed=0,inTrip=0;
+  if(PL&&PL.date&&PL.days&&!demo){
+    var t0=new Date(PL.date+'T12:00:00').getTime(),dIdx=function(k){return k?Math.round((new Date(k+'T12:00:00').getTime()-t0)/864e5):-1};
+    var allSt=[];PL.days.forEach(function(st){allSt=allSt.concat(st)});
+    cl.forEach(function(c){var di=dIdx(c.day);if(di>=0&&di<PL.days.length)inTrip+=c.photos.length;
+      if(c.la!=null){var b=null,bd=0.5;allSt.forEach(function(st){var k=km(c.la,c.lo,st[1],st[2]);if(k<bd){bd=k;b=st}});if(b&&!c.airport)c.name=b[0];return}});
+    var byDay={};cl.forEach(function(c){if(c.la!=null)return;var di=dIdx(c.day);if(di<0||di>=PL.days.length||!PL.days[di].length)return;(byDay[di]=byDay[di]||[]).push(c)});
+    Object.keys(byDay).forEach(function(di){var list=byDay[di],st=PL.days[di];list.forEach(function(c,k){var s=st[Math.min(st.length-1,Math.floor(k*st.length/list.length))];
+      c.name=s[0];c.la=s[1];c.lo=s[2];c.city=PL.dest;c.cc=PL.abroad?'ZZ':'IL';c.guess=true;guessed+=c.photos.length})})}
   // 3. merge neighbours that got the same name
   var m=[];cl.forEach(function(c){var p=m[m.length-1];if(p&&p.day===c.day&&c.name&&p.name===c.name){p.photos=p.photos.concat(c.photos)}else m.push(c)});cl=m;
   // 4. chapters: the way out, days at the destination, the way back
   var abroad=cl.filter(function(c){return c.cc&&c.cc!=='IL'&&!c.airport}),isAbroad=abroad.length>0,core=isAbroad?abroad:cl;
   var cities={};core.forEach(function(c){if(c.city&&!c.airport)cities[c.city]=(cities[c.city]||0)+c.photos.length});
-  var dest=Object.keys(cities).sort(function(a,b){return cities[b]-cities[a]})[0]||(isAbroad&&abroad[0].w&&abroad[0].w.country)||'הטיול שלנו';
+  var dest=(PL&&inTrip>=photos.length/2&&PL.dest)||Object.keys(cities).sort(function(a,b){return cities[b]-cities[a]})[0]||(isAbroad&&abroad[0].w&&abroad[0].w.country)||'הטיול שלנו';
   var first=isAbroad?cl.indexOf(abroad[0]):0,lastI=isAbroad?cl.indexOf(abroad[abroad.length-1]):cl.length-1;
   var ch=[];
   if(first>0)ch.push({title:'יוצאים לדרך',sub:cl[0].day?dm(cl[0].day):'',cls:cl.slice(0,first)});
@@ -125,7 +136,7 @@ async function build(picked,demo){
   if(lastI<cl.length-1)ch.push({title:'חוזרים הביתה',sub:cl[lastI+1].day?dm(cl[lastI+1].day):'',cls:cl.slice(lastI+1)});
   ch.forEach(function(h){h.cls.forEach(function(c){c.photos.forEach(function(p){p.label=c.name||'';p.chapter=h.title})})});
   var dks=cl.map(function(c){return c.day}).filter(Boolean),named={};cl.forEach(function(c){if(c.name)named[c.name]=1});
-  story={dest:dest,chapters:ch,days:d0&&days.length&&days[days.length-1].day?Math.round((new Date(days[days.length-1].day+'T12:00:00').getTime()-d0)/864e5)+1:days.length,places:Object.keys(named).length,range:dks.length?dm(dks[0])+(dks[0]!==dks[dks.length-1]?'–'+dm(dks[dks.length-1]):'')+'.'+dks[0].slice(0,4):'',geo:geo};
+  story={guessed:guessed,plan:!!(PL&&inTrip),dest:dest,chapters:ch,days:d0&&days.length&&days[days.length-1].day?Math.round((new Date(days[days.length-1].day+'T12:00:00').getTime()-d0)/864e5)+1:days.length,places:Object.keys(named).length,range:dks.length?dm(dks[0])+(dks[0]!==dks[dks.length-1]?'–'+dm(dks[dks.length-1]):'')+'.'+dks[0].slice(0,4):'',geo:geo};
   showStory();lens();busy=false;$('make').disabled=false}
 function thumbs(){$('thumbs').innerHTML='';photos.forEach(function(p){var c=document.createElement('canvas');c.width=96;c.height=96;var x=c.getContext('2d'),s=Math.max(96/p.img.width,96/p.img.height);
   x.drawImage(p.img,(96-p.img.width*s)/2,(96-p.img.height*s)/2,p.img.width*s,p.img.height*s);$('thumbs').appendChild(c)})}
@@ -135,7 +146,7 @@ function showStory(){
     var names=[];h.cls.forEach(function(c){if(c.name&&names.indexOf(c.name)<0)names.push(c.name)});
     var n=h.cls.reduce(function(s,c){return s+c.photos.length},0);
     return '<div><span><b>'+esc(h.title)+'</b> <span class="sub">'+esc(h.sub)+'</span><span class="sub">'+(names.length?esc(names.join(' · ')):'בלי מיקום')+'</span></span><span>'+n+'</span></div>'}).join('')+
-    '<p class="muted">שמות המקומות מגיעים מהמפה הפתוחה OpenStreetMap ולפעמים יהיו כלליים, כמו שם רחוב. בגרסה המלאה הם יוחלפו בשמות מהמסלול ששמרתם, כשהתמונה צולמה ליד מקום מהמסלול.</p>'}
+    '<p class="muted">'+(story.guessed?story.guessed+' תמונות בלי מיקום שובצו לפי המסלול ששמרתם ב-HaniaGo ולפי שעת הצילום, ולכן השיבוץ שלהן משוער. ':'')+(story.plan?'תמונות שצולמו ליד מקום מהמסלול מקבלות את השם שלו. ':'')+'שאר השמות מגיעים מהמפה הפתוחה OpenStreetMap ולפעמים יהיו כלליים, כמו שם רחוב.</p>'}
 
 // ---------- music ----------
 function ctx(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();return actx}
