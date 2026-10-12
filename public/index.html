@@ -40,6 +40,14 @@ details.fold .pm::before,details.fold .pm::after{content:'';position:absolute;le
 details.fold .pm::after{transform:rotate(90deg);transition:transform .2s}
 details.fold[open] .pm::after{transform:rotate(0)}
 details.fold>summary:focus-visible{outline:3px solid var(--sun);outline-offset:2px;border-radius:8px}
+.lnk{border:0!important;background:none!important;color:var(--sea)!important;min-height:40px;padding:0!important;text-decoration:underline;font-weight:600;align-self:flex-start;box-shadow:none!important}
+.row.sm .btn{min-height:38px;font-size:14px;padding:0 12px}
+.tcmini{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:48px;font-weight:700}
+.tcmini span{font-weight:400;color:var(--muted);font-size:14px}
+details.pk>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;min-height:44px;font-weight:700}
+details.pk>summary::-webkit-details-marker{display:none}
+details.pk>summary::after{content:'+';color:var(--sea);font-size:22px;font-weight:700;width:24px;text-align:center}
+details.pk[open]>summary::after{content:'−'}
 ol.steps2{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
 </style>
 <title>HaniaGo: תכנון טיול, מהבית ועד המלון</title>
@@ -174,9 +182,8 @@ nav button.on{background:var(--sea-soft);color:var(--ink)}
 <body>
 <div class="wrap" dir="rtl" lang="he">
   <div class="top"><h1 class="logo">Hania<span>Go</span></h1><span class="row" style="flex-wrap:nowrap"><button id="inst" hidden aria-label="התקנת האפליקציה">התקנה</button><button data-act="newtrip">טיול חדש</button></span></div>
-  <p class="note">מהדלת בבית ועד החזרה</p>
   <p id="instHelp" class="demo" hidden>באייפון: פתחו את האתר ב-Safari, לחצו על כפתור השיתוף ובחרו "הוסף למסך הבית".</p>
-  <p class="demo">גרסת בטא: מחירי הטיסות אמיתיים. עלויות ביעד וזמני נסיעה הם הערכה, וכדאי לבדוק שעות ומחירים לפני שמזמינים.</p>
+  <p class="demo" id="beta" style="display:flex;gap:10px;align-items:center"><span style="flex:1">גרסת בטא: מחירי הטיסות אמיתיים. עלויות ביעד וזמני נסיעה הם הערכה, וכדאי לבדוק שעות ומחירים לפני שמזמינים.</span><button id="betax" aria-label="הבנתי, להסתיר" style="min-height:36px;padding:0 12px;border:0;border-radius:8px;background:rgba(0,0,0,.12);color:inherit;font:inherit;font-weight:700">הבנתי</button></p>
   <div id="pass"></div>
   <main id="main" class="sec"></main>
 </div>
@@ -430,7 +437,7 @@ function stopExtra(s,d){var h=(s.a||s.c)?pLink('tiqets',tiqetsUrl(s,d),'כרטי
  if(S.fbOpen===s.n)h+='<div class="stop"><b>איך היה ב'+esc(s.n)+'?</b>'+seg('fbRate',[['good','מעולה'],['ok','בסדר'],['bad','לא מתאים']])
   +'<label for="fbt">מה כדאי שמשפחות אחרות יידעו<textarea id="fbt" data-live="fbText" rows="3">'+esc(S.fbText||'')+'</textarea></label>'+msgHtml()
   +'<div class="row"><button class="pri grow" data-act="fbsend" data-place="'+esc(s.n)+'">'+(S.busy?'שולח…':'שליחה')+'</button><button class="grow" data-act="fbclose">סגירה</button></div></div>';
- else h+='<button data-act="fbopen" data-place="'+esc(s.n)+'">הייתם כאן? הוסיפו טיפ או אזהרה</button>';
+ else h+='<button class="lnk" data-act="fbopen" data-place="'+esc(s.n)+'">הייתם כאן? טיפ או אזהרה</button>';
  return h}
 function statusOf(r){return APPROVED[r.id]==='yes'?'אושר':APPROVED[r.id]==='no'?'נדחה':'ממתין לאימות'}
 function soft(){var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;render(1)}
@@ -457,10 +464,10 @@ function leavePlan(){var d=D(),h=HOME[S.home]||HOME.tlv;if(!d.abroad||!S.fDep)re
  return{out:out,steps:st,car:car}}
 function gdir(a,b,mode){return 'https://www.google.com/maps/dir/?api=1&hl=iw&origin='+a.la+','+a.lo+'&destination='+b.la+','+b.lo+'&travelmode='+mode}
 function legBtns(x){var a=function(pri,url,label){return '<a class="btn grow'+(pri?' pri':'')+'" target="_blank" rel="noopener" href="'+esc(url)+'">'+label+'</a>'};
- if(x.byName){var qn=encodeURIComponent(x.toName+' '+D().n);return '<div class="row">'+(S.car?a(1,'https://waze.com/ul?q='+qn+'&navigate=yes','Waze'):a(1,'https://moovitapp.com/?to='+qn,'Moovit'))+a(0,'https://www.google.com/maps/dir/?api=1&hl=iw&destination='+qn+'&travelmode='+(S.car?'driving':'transit'),'Google Maps')+'</div>'}
- if(S.car)return '<div class="row">'+a(1,waze(x.to.la,x.to.lo),'Waze')+a(0,gdir(x.from,x.to,'driving'),'Google Maps')+'</div>';
- if(/^הליכה/.test(x.title))return '<div class="row">'+a(1,gdir(x.from,x.to,'walking'),'מסלול הליכה ב-Google Maps')+'</div>';
- return '<div class="row">'+a(1,moovit(x.toName,x.to.la,x.to.lo),'Moovit')+a(0,gdir(x.from,x.to,'transit'),'Google Maps')+'</div>'}
+ if(x.byName){var qn=encodeURIComponent(x.toName+' '+D().n);return '<div class="row sm">'+(S.car?a(1,'https://waze.com/ul?q='+qn+'&navigate=yes','Waze'):a(1,'https://moovitapp.com/?to='+qn,'Moovit'))+a(0,'https://www.google.com/maps/dir/?api=1&hl=iw&destination='+qn+'&travelmode='+(S.car?'driving':'transit'),'Google Maps')+'</div>'}
+ if(S.car)return '<div class="row sm">'+a(1,waze(x.to.la,x.to.lo),'Waze')+a(0,gdir(x.from,x.to,'driving'),'Google Maps')+'</div>';
+ if(/^הליכה/.test(x.title))return '<div class="row sm">'+a(1,gdir(x.from,x.to,'walking'),'מסלול הליכה ב-Google Maps')+'</div>';
+ return '<div class="row sm">'+a(1,moovit(x.toName,x.to.la,x.to.lo),'Moovit')+a(0,gdir(x.from,x.to,'transit'),'Google Maps')+'</div>'}
 function dayUrl(st,d){var p=function(x){return x.la+','+x.lo};return 'https://www.google.com/maps/dir/?api=1&hl=iw&origin='+p(d.hotel)+'&destination='+p(d.hotel)+'&waypoints='+encodeURIComponent(st.map(p).join('|'))+'&travelmode=driving'}
 function dayNav(st,d){return S.car?'<a class="btn pri" target="_blank" rel="noopener" href="'+esc(dayUrl(st,d))+'">כל היום ב-Google Maps: מהמלון, '+st.length+' עצירות וחזרה</a>':'<p class="note">בתחבורה ציבורית אי אפשר לפתוח יום שלם עם כמה עצירות בלחיצה אחת. לכל קטע יש כפתור מוכן, מהנקודה הקודמת לבאה.</p>'}
 function hsh(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return h.toString(36)}
@@ -552,7 +559,8 @@ function packItems(){var d=D(),y=youngest(),m=+S.date.slice(5,7),k=hasKids(),L=[
  if(d.abroad)add('לפני היציאה',['צ׳ק אין לטיסה והורדת כרטיסי העלייה למטוס','שקילת המזוודות','הודעה לחברת האשראי על הנסיעה, אם נדרש']);
  add('לפני היציאה',['כיבוי דוד וסגירת חלונות','השקיה ומי שידאג לחיות המחמד']);return L}
 function packCard(){var L=packItems(),pk=S.pack||{},done=L.filter(function(x){return pk[x[1]]}).length,g='',h='<div class="card" id="c-pack"><div class="sp"><h3>רשימת ציוד</h3><span class="tag">'+done+' מתוך '+L.length+'</span></div><p class="note">מותאמת ליעד, לעונה ולגילים שהזנתם. הסימונים נשמרים.</p>';
- L.forEach(function(x,i){if(x[0]!==g){g=x[0];h+='<p style="margin:12px 0 4px"><b>'+g+'</b></p>'}h+='<label for="pk'+i+'" style="flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:16px;min-height:36px"><input id="pk'+i+'" type="checkbox" data-pack="'+esc(x[1])+'"'+(pk[x[1]]?' checked':'')+'>'+esc(x[1])+'</label>'+(x[1]===CAMKEY?'<button data-act="camguide" style="min-height:36px;align-self:flex-start">איך מפעילים</button>':'')});return h+'</div>'}
+ var G={};L.forEach(function(x){G[x[0]]=G[x[0]]||[0,0];G[x[0]][1]++;if(pk[x[1]])G[x[0]][0]++});var firstOpen=Object.keys(G).filter(function(k){return G[k][0]<G[k][1]})[0];
+ L.forEach(function(x,i){if(x[0]!==g){if(g)h+='</details>';g=x[0];h+='<details class="pk"'+(g===firstOpen?' open':'')+'><summary>'+g+' <span class="note" style="margin-inline-start:auto;margin-inline-end:8px">'+G[g][0]+'/'+G[g][1]+'</span></summary>'}h+='<label for="pk'+i+'" style="flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:16px;min-height:36px"><input id="pk'+i+'" type="checkbox" data-pack="'+esc(x[1])+'"'+(pk[x[1]]?' checked':'')+'>'+esc(x[1])+'</label>'+(x[1]===CAMKEY?'<button class="lnk" data-act="camguide">איך מפעילים</button>':'')});return h+(g?'</details>':'')+'</div>'}
 function homeIn(){return S.home==='other'?'<label for="hmn">שם העיר או היישוב<input id="hmn" data-f="homeName" value="'+esc(S.homeName||'')+'"></label>':''}
 function homeNm(){return S.home==='other'&&(S.homeName||'').trim()?S.homeName.trim().slice(0,60):''}
 function vLeave(){var d=D();if(!d.abroad)return vLeave0();loadDrive();
@@ -666,6 +674,10 @@ function tripCard(){var d=D(),n=daysTo();if(n===null)return '';var end=-n-nights
    +(pl.length?'<p class="note">טיפ קצר שלכם יעזור למשפחה הבאה. על איזה מקום?</p><div class="row">'+pl.slice(0,8).map(function(x){return '<button data-act="sumtip" data-place="'+esc(x)+'">'+esc(x)+'</button>'}).join('')+'</div>':'')+'<a class="btn pri" href="/lab/video.html" style="text-decoration:none;display:flex;align-items:center;justify-content:center">סרטון מהטיול, מהתמונות שצילמתם</a><button data-act="newtrip">לתכנן את הטיול הבא</button></div>'}
  var ti=todayIdx(),hr=new Date().getHours();if(ti>=0&&ti<nights()&&hr>=17&&S.tmOff!==S.date+'|'+ti)return tomorrowCard(ti,d);
  return ''}
+var TCOPEN='';
+function tripTop(){var f=tripCard();if(!f)return '';if(S.tab==='family'||(S.tab==='plan'&&S.pday===-1)||TCOPEN===S.tab)return f;
+ var t=(f.match(/<h3>([\s\S]*?)<\/h3>/)||[])[1]||'',n=(f.match(/data-go=|data-act="camguide"/g)||[]).length;
+ return '<button class="tcmini" data-act="tcopen">'+t+'<span>'+(n?n+' דברים לסגור · ':'')+'פתיחה</span></button>'}
 function newsCard(){if(SEENV===VERSION)return '';return '<div class="card sel"><div class="sp"><h3>האפליקציה התעדכנה</h3><span class="tag">גרסה '+VERSION+'</span></div><ul style="margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:4px">'+WHATSNEW.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><button data-act="newsok">הבנתי</button></div>'}
 function verLine(){return (navigator.onLine===false?'<p class="note" role="status" style="text-align:center">אין חיבור לרשת. המסלול השמור זמין, ומחירים והטבות יתעדכנו כשהחיבור יחזור.</p>':'')+'<p class="note" style="text-align:center">HaniaGo · גרסה '+VERSION+' · <a href="/d">יעדים</a> · <button data-act="newsshow" style="min-height:44px;border:0;background:none;padding:0 4px;color:inherit;text-decoration:underline;font-weight:400">מה חדש</button></p>'}
 function ev(e){if(EVS[e])return;EVS[e]=1;try{fetch('/api/ev',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({e:e}),keepalive:true}).catch(function(){})}catch(x){}}
@@ -683,7 +695,7 @@ function shareCard(d){var x=S.shareIn,n=nights()+1,h;
  if(x.day!=null)return h+'<div class="row"><button class="pri grow" data-act="shday" data-i="'+x.day+'">הוספה</button><button class="grow" data-act="shcancel">ביטול</button></div></div>';
  h+='<div class="row">';for(var i=0;i<n;i++)h+='<button data-act="shday" data-i="'+i+'">יום '+(i+1)+'</button>';
  return h+'</div><div class="row"><button class="grow" data-act="shhotel">זה המלון שלנו</button><button class="grow" data-act="shcancel">ביטול</button></div></div>'}
-function dayAdd(i){return '<div class="stop"><label for="da'+i+'">מצאתם מקום? הדביקו כאן קישור שיתוף מ-Google Maps<input id="da'+i+'" data-live="shLink" value="'+esc(S.shLink||'')+'"></label>'+(S.daMsg&&S.daDay===i?'<p class="'+(S.daOk?'note':'err')+'" role="status">'+esc(S.daMsg)+'</p>':'')+'<button data-act="dayadd" data-i="'+i+'">'+(S.shBusy?'מאתר במפה…':'הוספה ליום הזה')+'</button></div>'}
+function dayAdd(i){if(S.daOpen!==i&&!(S.daMsg&&S.daDay===i))return '<button class="lnk" data-act="daopen" data-i="'+i+'">+ הוספת מקום מ-Google Maps ליום הזה</button>';return '<div class="stop"><label for="da'+i+'">מצאתם מקום? הדביקו כאן קישור שיתוף מ-Google Maps<input id="da'+i+'" data-live="shLink" value="'+esc(S.shLink||'')+'"></label>'+(S.daMsg&&S.daDay===i?'<p class="'+(S.daOk?'note':'err')+'" role="status">'+esc(S.daMsg)+'</p>':'')+'<button data-act="dayadd" data-i="'+i+'">'+(S.shBusy?'מאתר במפה…':'הוספה ליום הזה')+'</button></div>'}
 function stopXY(n){var d=D(),a=d.at.filter(function(x){return x.n===n})[0];if(a)return a;var g=(S.own||{})[S.dest+'|'+n];return g&&!g.miss?g:null}
 function insertNear(list,name){var p=stopXY(name),h=D().hotel;if(!p||!list.length){list.push(name);return}
  var pts=[h].concat(list.map(stopXY)).concat([h]),best=list.length,bd=1e9;
@@ -742,6 +754,7 @@ function geo(q,d){if(/^https?:\/\//i.test(q))return api('GET','/api/geo?link='+e
 function mapPt(la,lo){return 'https://www.google.com/maps/search/?api=1&query='+la+','+lo}
 function myHotelCard(d){var m=d.hotel.mine?S.myHotel:null,o=S.mhOpts&&S.mhOpts.dest===S.dest?S.mhOpts:null;
  if(m)return '<div class="card"><h3>המלון שלכם</h3><p>'+esc(m.n)+'<br><span class="note">'+esc(m.label||'')+'</span></p><a class="btn" target="_blank" rel="noopener" href="'+mapPt(m.la,m.lo)+'">בדיקת הנקודה במפה</a><p class="note">כל המסלולים, המפות והניווט יוצאים וחוזרים לנקודה הזאת. אם היא לא נכונה, חזרו למלון המוצע ונסו שוב עם קישור מ-Google Maps.</p><button data-act="myhoteldel">חזרה למלון המוצע</button></div>';
+ if(!o&&!S.mhOpen&&!S.mhName&&!S.mhMsg)return '<div class="card"><button data-act="mhopen" class="tcmini" style="border:0;padding:0;background:none">כבר הזמנתם מלון?<span>הזנת המלון שלכם</span></button></div>';
  var h='<div class="card"><h3>כבר הזמנתם מלון?</h3><p class="note">הכי מדויק: פתחו את המלון ב-Google Maps, לחצו שיתוף, והדביקו כאן את הקישור. אפשר גם לכתוב רחוב ומספר, או את שם המלון. הזמנה ב-Booking לא מתעדכנת כאן לבד.</p><label for="mh">קישור מ-Google Maps, כתובת או שם המלון<input id="mh" data-live="mhName" value="'+esc(S.mhName||'')+'"></label><label for="mhp">מחיר ללילה לכל המשפחה בשקלים, לא חובה<input id="mhp" type="number" inputmode="numeric" data-live="mhPrice" value="'+esc(S.mhPrice||'')+'"></label>'+(S.mhMsg?'<p class="err" role="alert">'+esc(S.mhMsg)+'</p>':'')+'<button data-act="myhotel">'+(S.mhBusy?'מחפש במפה…':'חיפוש המלון')+'</button>';
  if(o)h+='<div class="stop"><b>איזה מהם המלון שלכם?</b>'+o.list.map(function(x,i){return '<div class="sp" style="align-items:center"><span>'+esc(x.label)+'<br><a target="_blank" rel="noopener" href="'+mapPt(x.la,x.lo)+'">בדיקה במפה</a></span><button data-act="mhpick" data-i="'+i+'">זה המלון</button></div>'}).join('')+'<p class="note">אף אחד לא מתאים? הדביקו קישור שיתוף מ-Google Maps, זה תמיד מדויק.</p></div>';
  return h+'</div>'}
@@ -776,11 +789,11 @@ function render(keep){if(VIEW){document.body.classList.remove('welcome');documen
  document.body.classList.remove('viewing');D();var wel=!S.started;document.body.classList.toggle('welcome',wel);ev(wel?'welcome':'tab_'+S.tab);
  if(wel){document.getElementById('pass').innerHTML='';document.getElementById('main').innerHTML=vWelcome();document.getElementById('nav').innerHTML='';if(!keep)window.scrollTo(0,0);return}
  loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0],gi=0;NAV.forEach(function(g,i){if(g[1].indexOf(t[0])>=0)gi=i});if(gi===0)S.lastP=t[0];
- document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=newsCard()+tripCard()+(gi===0?stepBar(t[0]):gi===3?moreBar(t[0]):'')+t[2]()+verLine()+calHtml()+sheetHtml()+(S.busy&&S.tab==='family'?'<div class="buildbar" role="status" aria-live="polite"><i class="spin" aria-hidden="true"></i><div>'+(S.building?'<b>בונים את '+esc(S.building)+'</b><span id="bstage">'+bStage()[1]+'</span><div class="bbar" role="progressbar" aria-label="התקדמות בניית היעד"><i id="bbar" style="width:'+bStage()[0]+'%"></i></div>':'<b>מחפשים את היעד</b><span>רגע אחד…</span>')+'</div></div>':'');
+ document.getElementById('pass').innerHTML=gi===0?vPass():'';document.getElementById('main').innerHTML=newsCard()+tripTop()+(gi===0?stepBar(t[0]):gi===3?moreBar(t[0]):'')+t[2]()+verLine()+calHtml()+sheetHtml()+(S.busy&&S.tab==='family'?'<div class="buildbar" role="status" aria-live="polite"><i class="spin" aria-hidden="true"></i><div>'+(S.building?'<b>בונים את '+esc(S.building)+'</b><span id="bstage">'+bStage()[1]+'</span><div class="bbar" role="progressbar" aria-label="התקדמות בניית היעד"><i id="bbar" style="width:'+bStage()[0]+'%"></i></div>':'<b>מחפשים את היעד</b><span>רגע אחד…</span>')+'</div></div>':'');
  var nv=document.getElementById('nav');nv.className='nav4';nv.innerHTML=NAV.map(function(g,i){var to=i===0?(S.lastP||'family'):g[1][0];return '<button data-go="'+to+'" class="'+(i===gi?'on':'')+'"'+(i===gi?' aria-current="page"':'')+'><svg aria-hidden="true" viewBox="0 0 24 24">'+g[2]+'</svg>'+g[0]+'</button>'}).join('');
  save();pushSync();if(!keep)window.scrollTo(0,0)}
 document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var d=b.dataset;
- if(d.go){S.tab=d.go;S.err='';if(d.go==='plan'&&d.to)S.pday=-1;try{history.replaceState(null,'','#'+d.go)}catch(x){}render();if(d.to)jump(d.to);return}
+ if(d.go){S.tab=d.go;S.err='';TCOPEN='';if(d.go==='plan'&&d.to)S.pday=-1;try{history.replaceState(null,'','#'+d.go)}catch(x){}render();if(d.to)jump(d.to);return}
  if(d.set){var v=d.val;S[d.set]=v==='true'?true:v==='false'?false:v;render(1);return}
  if(d.opt){var q=d.opt.split(':');S.sel=S.sel||{};S.sel[q[0]]=q[1];render(1);return}
  if(d.pick!==undefined){S.flight=+d.pick;render(1);return}
@@ -905,8 +918,8 @@ function tomorrowCard(ti,d){var days=dayOptions(),t=days[ti+1];if(!t)return '';v
  +(x&&x.hi!=null?'<p class="note">'+(r.kind==='forecast'?'תחזית':'בדרך כלל')+': '+x.hi+'°'+(r.kind==='forecast'&&x.rain!=null?' · סיכוי לגשם '+x.rain+'%':'')+'</p>':'')+(tx.length?'<p class="warn">צריך כרטיסים מראש ל'+esc(tx.map(function(s){return s.n}).join(', '))+'.</p>':'')
  +'<button class="pri" data-act="pday" data-i="'+(ti+1)+'" data-tab="plan">ליום של מחר</button></div>'}
 function offlineCard(d){var u=/android/i.test(navigator.userAgent)?'geo:'+d.hotel.la+','+d.hotel.lo+'?z=12':'https://www.google.com/maps/@'+d.hotel.la+','+d.hotel.lo+',12z';
- return '<div class="card" id="c-offline"><h3>'+(S.offOk===S.date?'✓ המסלול מוכן גם בלי אינטרנט':'יוצאים בלי חבילת גלישה?')+'</h3><p class="note">המסלול, השעות והכתובות נשמרים בטלפון, ונפתחים גם בלי אינטרנט כשהאפליקציה מותקנת. ניווט בלי אינטרנט עובד דרך מפה שמורידים מראש ב-Google Maps:</p>'
- +'<ol class="steps2"><li>פותחים את '+esc(d.n)+' ב-Google Maps בכפתור למטה, כשיש Wi-Fi.</li><li>לוחצים על תמונת הפרופיל ובוחרים "מפות אופליין".</li><li>"בחירת מפה משלך", מכסים את האזור ולוחצים הורדה. ההורדה ממשיכה גם כשיוצאים מהמפות.</li></ol><p class="note">חוזרים ל-HaniaGo דרך כפתור האפליקציות האחרונות (הריבוע או ההחלקה מלמטה), לא בכפתור אחורה, שסוגר את המפות באמצע.</p><a class="btn" rel="noopener" href="'+esc(u)+'">פתיחת '+esc(d.n)+' ב-Google Maps</a>'
+ return '<div class="card" id="c-offline"><h3>'+(S.offOk===S.date?'✓ המסלול מוכן גם בלי אינטרנט':'יוצאים בלי חבילת גלישה?')+'</h3><p class="note">המסלול נשמר בטלפון ונפתח גם בלי אינטרנט. לניווט בלי אינטרנט מורידים מראש מפה ב-Google Maps.</p>'
+ +'<details class="pk"><summary>איך מורידים מפה</summary><ol class="steps2"><li>פותחים את '+esc(d.n)+' ב-Google Maps בכפתור למטה, כשיש Wi-Fi.</li><li>לוחצים על תמונת הפרופיל ובוחרים "מפות אופליין".</li><li>"בחירת מפה משלך", מכסים את האזור ולוחצים הורדה. ההורדה ממשיכה גם כשיוצאים מהמפות.</li></ol><p class="note">חוזרים ל-HaniaGo דרך כפתור האפליקציות האחרונות (הריבוע או ההחלקה מלמטה), לא בכפתור אחורה, שסוגר את המפות באמצע.</p></details><a class="btn" rel="noopener" href="'+esc(u)+'">פתיחת '+esc(d.n)+' ב-Google Maps</a>'
  +'<button class="'+(S.offOk===S.date?'':'pri')+'" data-act="offok">'+(S.offOk===S.date?'שמירה מחדש':'אישור המסלול ושמירה לשימוש בלי אינטרנט')+'</button></div>'}
 function offlineSave(){var d=D(),urls=[];dayOptions().forEach(function(day){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){var x=PH[s.n];if(x&&x.u)urls.push(x.u)})});
  urls.forEach(function(u){try{fetch(u,{mode:'no-cors'}).catch(function(){})}catch(e){}});['/','/lab/video.html','/lab/video.js','/icons/icon-192.png'].forEach(function(u){fetch(u).catch(function(){})});
@@ -923,7 +936,7 @@ async function pushOn(){S.pushMsg='';S.pushBusy=true;render(1);try{
 async function pushSub(){var reg=await navigator.serviceWorker.ready;return reg.pushManager.getSubscription()}
 var PUSHJ='',pushT=null;
 function pushSync(){if(!PUSHON||!('serviceWorker' in navigator)||VIEW)return;clearTimeout(pushT);pushT=setTimeout(async function(){try{var t=pushTrip(),j=JSON.stringify(t);if(j===PUSHJ)return;var sub=await pushSub();if(!sub){setPush(false);return}await api('POST','/api/push/sub',{sub:sub.toJSON(),trip:t});PUSHJ=j}catch(e){}},3000)}
-function pushCard(){return '<div class="card" id="c-push"><h3>התראות לטיול</h3><p class="note">שלושה ימים לפני: תזכורת להפעיל מיקום במצלמה. ערב לפני הטיסה: צ׳ק אין ושעת יציאה. בכל ערב בטיול: מה מחכה מחר ואם צפוי גשם. אחרי החזרה: סרטון מהטיול. נשמרים בשרת רק היעד, התאריכים ושמות המקומות במסלול, בלי פרטים מזהים.</p>'
+function pushCard(){return '<div class="card" id="c-push"><h3>התראות לטיול</h3><p class="note">לפני הטיסה, בכל ערב בטיול (מה מחר ואם צפוי גשם), ואחרי החזרה לסרטון. בלי פרטים מזהים.</p>'
  +(PUSHON?'<p>✓ ההתראות פועלות במכשיר הזה.</p><div class="row"><button class="grow" data-act="pushtest">שליחת התראת בדיקה</button><button class="grow" data-act="pushoff">כיבוי</button></div>':'<button class="pri" data-act="pushon">'+(S.pushBusy?'מפעיל…':'הפעלת התראות')+'</button>')+(S.pushMsg?'<p class="note" role="status">'+esc(S.pushMsg)+'</p>':'')+'</div>'}
 function camBrand(){var u=navigator.userAgent;return /iphone|ipad|ipod/i.test(u)?'ip':/samsung|sm-[a-z0-9]/i.test(u)?'sa':/xiaomi|redmi|poco|\bmi \d|2201|2211|2312|2406/i.test(u)?'xi':'px'}
 var CAMS={xi:['שיאומי, רדמי, פוקו',['פותחים את אפליקציית המצלמה.','לוחצים על התפריט (שלושה קווים או גלגל שיניים) ונכנסים להגדרות.','מפעילים את "שמירת מידע מיקום".','אם נשאלים, מאשרים למצלמה גישה למיקום.']],
@@ -941,6 +954,9 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
  if(act==='calopen'){CAL={a:S.date,b:addDays(S.date,nights()),m:S.date.slice(0,7)};render(1)}
  else if(act==='calnav'){var dt=new Date(CAL.m+'-01T12:00');dt.setMonth(dt.getMonth()+(+d.d));CAL.m=dt.getFullYear()+'-'+p2(dt.getMonth()+1);render(1)}
  else if(act==='calx'){CAL=null;render(1)}
+ else if(act==='tcopen'){TCOPEN=S.tab;render(1)}
+ else if(act==='mhopen'){S.mhOpen=true;render(1)}
+ else if(act==='daopen'){S.daOpen=+d.i;render(1)}
  else if(act==='ownopen'){S.ownOpen=d.k;render(1);jump('c-own')}
  else if(act==='ownx'){S.ownOpen='';S.planRes=null;S.shareIn=null;render(1)}
  else if(act==='destopen'){loadDl();SHEET='dest';S.cands=null;S.err2='';S.note2='';render(1);setTimeout(function(){var q=document.getElementById('nd');if(q)q.focus()},80)}
@@ -958,6 +974,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
  else if(act==='tmoff'){S.tmOff=S.date+'|'+todayIdx();render(1)}
  else if(act==='pday'&&d.tab){S.tab='plan';render();window.scrollTo(0,0)}});
 if(location.hash==='#camera'){SHEET='cam';S.tab='leave';HASHTAB=1;try{history.replaceState(null,'','#leave')}catch(e){}}
+(function(){var b=document.getElementById('beta'),x=document.getElementById('betax');if(!b||!x)return;try{if(localStorage.getItem('haniago_beta')==='1')b.hidden=true}catch(e){}x.addEventListener('click',function(){b.hidden=true;try{localStorage.setItem('haniago_beta','1')}catch(e){}})})();
 ev('open');readShare();
 /* unique visitors: the device remembers its own last visit, the server only gets a count */
 (function(){var t=new Date(),day=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate(),mon=t.getFullYear()+'-'+(t.getMonth()+1),last='';try{last=localStorage.getItem('haniago_uv')||''}catch(e){return}
