@@ -1,0 +1,24 @@
+Background music for the HaniaGo trip video.
+
+All tracks come from FreePD (https://freepd.com), which publishes them under
+CC0 1.0 Universal (public domain dedication). Files were taken from the
+SoundSafari CC0-1.0-Music collection (github.com/SoundSafari/CC0-1.0-Music,
+folder freepd.com), trimmed to 100 seconds, loudness-normalized and re-encoded.
+
+ukulele     Happy Whistling Ukulele
+ukulele2    Ukulele Song
+funshine    Funshine - Kevin MacLeod
+sun         Adding the Sun - Kevin MacLeod
+city        City Sunshine - Kevin MacLeod
+family      Fancy Family - Rafael Krux
+tarantella  Village Tarantella - Kevin MacLeod
+notebook    Travelers Notebook
+north       Trip Up North - Bryan Teoh
+hopeful     Hopeful - Rafael Krux
+celebrate   Celebration - Alexander Nakarada
+piano       Lovely Piano Song
+sunflower   Champ de tournesol - Komiku
+rasta       Sunny Rasta - Alexander Nakarada
+pinacolada  Pina Colada - Alexander Nakarada
+venice      Night in Venice - Kevin MacLeod
+baguette    Le Baguette - Alexander Nakarada
