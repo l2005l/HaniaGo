@@ -590,7 +590,7 @@ function destSheet(){var ab=S.abroad,mine=Object.keys(DEST).filter(function(k){r
  +'<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px">'
  +(mine.length?'<div><p class="note" style="margin:0 0 6px"><b>היעדים שלי</b></p><div class="dl">'+mine.map(function(k){return '<button data-act="mydest" data-k="'+k+'" class="'+(k===S.dest?'on':'')+'">'+esc(DEST[k].n)+'</button>'}).join('')+'</div></div>':'')
  +'<div id="sug" class="sec"></div><div><p class="note" style="margin:0 0 6px"><b>'+(ab?'כל היעדים בחו״ל':'כל היעדים בארץ')+'</b> · ⏳ נבנה ברגע הבחירה</p><div id="dl" class="dl">'+dlHtml(S.newDest||'')+'</div></div></div>'
- +'<button data-act="mkdest">'+(S.busy?'מחפש…':'לא ברשימה? בניית יעד לפי השם שהקלדתם')+'</button><p class="note" style="margin:0">האטרקציות ביעדים שנבנים נכתבות על ידי בינה מלאכותית ומסומנות כלא מאומתות.</p></div></div>'}
+ +'<p class="note" style="margin:0">האטרקציות ביעדים שנבנים נכתבות על ידי בינה מלאכותית ומסומנות כלא מאומתות.</p></div></div>'}
 function thin(k){var x=DEST[k];return !!(x&&x.ai&&S.custom[k]&&!x.v)}
 function candH(c){return c.il?{name:c.n,il:true,la:c.la,lo:c.lo}:{name:c.n,code:c.code,la:c.la,lo:c.lo,abroad:true}}
 async function mkDest(h){if(S.busy)return;if(h)return mkDest0(h);var q=(S.newDest||'').trim().slice(0,60);if(!q){S.err2='כתבו שם של יעד.';return render(1)}
@@ -870,7 +870,8 @@ function calHtml(){if(!CAL)return '';var y=+CAL.m.slice(0,4),mo=+CAL.m.slice(5,7
 function loadDl(){if(DL&&DL.at>Date.now()-6*3600e3)return;var at=Date.now();DL=DL||{list:[],at:0};DL.at=at;api('GET','/api/destlist').then(function(j){DL={list:j.list||[],at:at};try{localStorage.setItem('haniago_dl',JSON.stringify(DL))}catch(e){}var el=document.getElementById('dl'),q=document.getElementById('nd');if(el)el.innerHTML=dlHtml(q?q.value:'')}).catch(function(){})}
 function dlItems(){var L=DL&&DL.list&&DL.list.length?DL.list:POP.map(function(p){return {n:p[0],code:p[1],il:0,ready:false}}).concat(ILP.map(function(n){return {n:n,il:1,ready:false}}));return L.filter(function(x){return !!x.il===!S.abroad})}
 function dlHtml(q){q=String(q||'').trim();var L=dlItems().map(function(x,i){return {x:x,i:i}}).filter(function(o){return !q||o.x.n.indexOf(q)>=0});L.sort(function(a,b){return a.x.n.localeCompare(b.x.n,'he')});
- if(!L.length)return '<p class="note">אין ברשימה יעד בשם הזה. אפשר לבנות אותו בכפתור למטה.</p>';var h='',lt='';
+ var bq=q?'<button data-act="mkdest" class="'+(L.length?'':'pri')+'" style="flex-basis:100%">'+(L.length?'לא ברשימה? חיפוש ':'חיפוש ובנייה של ')+'"'+esc(q)+'"</button>':'';
+ if(!L.length)return bq+'<p class="note" style="flex-basis:100%">אין ברשימה יעד בשם הזה. בלחיצה על הכפתור נבדוק למה התכוונתם ונבנה אותו.</p>';var h=bq,lt='';
  L.forEach(function(o){var f=o.x.n.charAt(0);if(!q&&f!==lt){lt=f;h+='<span class="lt">'+esc(f)+'</span>'}var on=o.x.key?S.dest===o.x.key:DEST[S.dest]&&DEST[S.dest].n===o.x.n;var bl=S.busy&&S.building===o.x.n;h+='<button data-act="dlpick" data-i="'+o.i+'" class="'+(on||bl?'on':o.x.ready?'':'nb')+'"'+(S.busy?' disabled':'')+'>'+esc(o.x.n)+(bl?' · בונים…':o.x.ready||o.x.key?'':' ⏳')+'</button>'});return h}
 function dlPick(i){var x=dlItems()[i];if(!x)return;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];SHEET=null;return render(1)}
  var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';SHEET=null;render(1);return}
