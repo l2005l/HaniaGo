@@ -50,6 +50,10 @@ input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
 .note{font-size:14px;color:var(--muted);border-inline-start:3px solid var(--sun);padding-inline-start:10px}
 .err{color:var(--bad);font-weight:600}
 .col{display:flex;flex-direction:column;gap:8px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);border-radius:14px;padding:4px}
+.seg button{border:0;background:transparent;color:var(--ink);flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;min-height:60px;border-radius:11px;text-align:right}
+.seg button span{font-weight:400;font-size:13px;color:var(--muted);line-height:1.3}
+.seg button[aria-checked="true"]{background:var(--surface);box-shadow:0 0 0 1.5px var(--sea)}
 .days .sub{display:block;color:var(--muted);font-size:13px;font-weight:400}
 .days div{align-items:flex-start}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
@@ -65,10 +69,8 @@ input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
     <h2 id="h-photos"><span class="n">1</span>תמונות מהטיול</h2>
     <p class="muted">הסיפור נבנה מהתמונות עצמן: תאריך הצילום קובע את היום, ומיקום הצילום קובע את שם המקום. כך גם יציאה מהבית, שדה התעופה ושינויים מהתוכנית נכנסים נכון. עד 80 תמונות.</p>
     <div class="row">
-      <label class="btn" for="files">בחירה מהגלריה</label>
+      <label class="btn" for="files">בחירת תמונות</label>
       <input id="files" type="file" accept="image/*" multiple>
-      <label class="btn" for="files2">בחירה מהקבצים</label>
-      <input id="files2" type="file" accept="image/jpeg,image/heic,image/heif,image/png,.jpg,.jpeg,.heic" multiple>
       <button id="demo" type="button">דוגמה</button>
     </div>
     <p id="diag" class="note" hidden></p>
@@ -89,6 +91,10 @@ input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
   <section aria-labelledby="h-make">
     <h2 id="h-make"><span class="n">4</span>יצירה</h2>
     <p class="note">הסרטון נבנה בזמן אמת: סרטון של דקה לוקח דקה. המסך צריך להישאר פתוח על הדף הזה עד הסוף.</p>
+    <div class="seg" role="radiogroup" aria-label="אורך הסרטון">
+      <button type="button" role="radio" data-len="short" aria-checked="false"><b>קצר</b><span id="lshort">כ-30 שניות · לסטורי ולרשתות</span></button>
+      <button type="button" role="radio" data-len="full" aria-checked="true"><b>מלא</b><span id="lfull">כל התמונות · למשפחה</span></button>
+    </div>
     <button id="make" class="main" type="button" disabled>יצירת הסרטון</button>
     <div id="prog" hidden><div class="bar"><i id="bari"></i></div><p id="progt" class="muted"></p></div>
     <div class="stage"><canvas id="cv" width="720" height="1280" hidden></canvas><video id="out" controls playsinline hidden></video></div>

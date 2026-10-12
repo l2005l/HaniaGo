@@ -47,7 +47,6 @@ async function onFiles(list){
   if(!photos.length){diag('<span class="err">לא הצלחתי לפתוח את התמונות. נסו לבחור קבצי JPG.</span>');return}
   build(fs.length)}
 $('files').addEventListener('change',function(e){onFiles(e.target.files);e.target.value=''});
-$('files2').addEventListener('change',function(e){onFiles(e.target.files);e.target.value=''});
 function diag(h){$('diag').hidden=false;$('diag').innerHTML=h}
 
 // ---------- demo: a family trip to Rome, including the way there and back ----------
@@ -86,7 +85,7 @@ async function build(picked,demo){
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
   diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+
-    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> ייתכן שהטלפון מסיר אותו כשבוחרים מהגלריה. נסו "בחירה מהקבצים", ואם גם שם אין מיקום, הסרטון ייבנה לפי תאריכים בלבד.':''));
+    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> ייתכן שהטלפון מסיר אותו כשבוחרים מהגלריה. הסרטון ייבנה לפי תאריכים בלבד, בלי שמות מקומות ובלי מפות.':''));
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
   photos.forEach(function(p){var dk=p.time?dayKey(p.time):(cur?cur.day:'');
@@ -115,7 +114,7 @@ async function build(picked,demo){
   ch.forEach(function(h){h.cls.forEach(function(c){c.photos.forEach(function(p){p.label=c.name||'';p.chapter=h.title})})});
   var dks=cl.map(function(c){return c.day}).filter(Boolean),named={};cl.forEach(function(c){if(c.name)named[c.name]=1});
   story={dest:dest,chapters:ch,days:days.length,places:Object.keys(named).length,range:dks.length?dm(dks[0])+(dks[0]!==dks[dks.length-1]?'–'+dm(dks[dks.length-1]):'')+'.'+dks[0].slice(0,4):'',geo:geo};
-  showStory();busy=false;$('make').disabled=false}
+  showStory();lens();busy=false;$('make').disabled=false}
 function thumbs(){$('thumbs').innerHTML='';photos.forEach(function(p){var c=document.createElement('canvas');c.width=96;c.height=96;var x=c.getContext('2d'),s=Math.max(96/p.img.width,96/p.img.height);
   x.drawImage(p.img,(96-p.img.width*s)/2,(96-p.img.height*s)/2,p.img.width*s,p.img.height*s);$('thumbs').appendChild(c)})}
 function showStory(){
@@ -142,12 +141,22 @@ $('tracks').addEventListener('click',function(e){var p=e.target.closest('[data-p
 paintTracks();
 
 // ---------- timeline and drawing ----------
+var LEN='full';
+function shortPicks(){ // one photo from each place, spread evenly when there are too many places
+  var all=[];story.chapters.forEach(function(h){h.cls.forEach(function(c){all.push({p:c.photos[Math.floor((c.photos.length-1)/2)],h:h})})});
+  var room=13;if(all.length<6){all=[];story.chapters.forEach(function(h){h.cls.forEach(function(c){c.photos.forEach(function(p){all.push({p:p,h:h})})})})}
+  if(all.length<=room)return all;var out=[];for(var i=0;i<room;i++)out.push(all[Math.floor(i*all.length/room)]);return out}
 function plan(){
   var sc=[],t=0,add=function(o,n){o.t0=t;o.len=n;sc.push(o);t+=n};
+  if(LEN==='short'){add({k:'intro'},2.6);shortPicks().forEach(function(x){add({k:'photo',p:x.p,i:sc.length,h:x.h},1.8)});add({k:'outro'},3.8);return {sc:sc,len:t}}
   var per=Math.max(1.5,Math.min(2.7,75/photos.length));
   add({k:'intro'},3.4);
   story.chapters.forEach(function(h){add({k:'chapter',h:h},3);h.cls.forEach(function(c){c.photos.forEach(function(p){add({k:'photo',p:p,i:sc.length,h:h},per)})})});
   add({k:'outro'},4.2);return {sc:sc,len:t}}
+function lens(){if(!story)return;var k=LEN,f,s;LEN='full';f=plan().len;LEN='short';s=plan().len;LEN=k;
+  $('lfull').textContent=Math.round(f)+' שניות · כל התמונות · למשפחה';$('lshort').textContent=Math.round(s)+' שניות · תמונה מכל מקום · לסטורי ולרשתות'}
+document.querySelector('.seg').addEventListener('click',function(e){var b=e.target.closest('[data-len]');if(!b)return;LEN=b.dataset.len;
+  [].forEach.call(document.querySelectorAll('.seg [data-len]'),function(x){x.setAttribute('aria-checked',String(x===b))})});
 function ease(x){return x<0?0:x>1?1:x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
 function cover(x,img,zoom,px,py){var s=Math.max(W/img.width,H/img.height)*zoom,w=img.width*s,h=img.height*s;x.drawImage(img,(W-w)/2+px*(w-W)/2,(H-h)/2+py*(h-H)/2,w,h)}
 function text(x,s,px,py,font,col,al){x.font=font;x.fillStyle=col;x.textAlign=al||'center';x.direction='rtl';x.fillText(s,px,py)}
