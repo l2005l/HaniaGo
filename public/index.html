@@ -591,7 +591,7 @@ function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)retur
 function vFamily(){var d=D();
  var pick='<button class="datebtn" id="destbtn" data-act="destopen"><span>יעד'+(d.ai?' · נבנה בבינה מלאכותית':'')+'</span>'+esc(d.n)+' ▾</button>'
   +(S.busy&&S.building?'':S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')+(S.note2?'<p class="note" role="status">'+S.note2+'</p>':'');
- return vFamily0().replace(/<label for="dest">יעד<select[\s\S]*?<\/select><\/label>/,function(){return pick}).replace('<div class="card"><div class="sp"><h3>מי נוסע</h3>',function(m){return readyCard()+m})}
+ return vFamily0().replace(/<label for="dest">יעד<select[\s\S]*?<\/select><\/label>/,function(){return pick}).replace('<div class="card"><div class="sp"><h3>מי נוסע</h3>',function(m){return (S.destPicked?'<details class="card fold"><summary><b>מסלולים מוכנים להתחלה</b><i class="pm" aria-hidden="true"></i></summary>'+readyCard().replace(/^<div class="card"><h3>מסלולים מוכנים להתחלה<\/h3>/,'').replace(/<\/div>$/,'')+'</details>':readyCard())+m})}
 function destSheet(){var ab=S.abroad,mine=Object.keys(DEST).filter(function(k){return !!DEST[k].abroad===!!ab&&k!=='view'});
  return '<div class="calm" role="dialog" aria-modal="true" aria-label="בחירת יעד"><div class="calc" style="height:88vh"><div class="sp"><h3>'+(ab?'לאן בעולם?':'לאן בארץ?')+'</h3><button class="x" data-act="sheetx" aria-label="סגירה">✕</button></div>'
  +'<label for="nd">חיפוש יעד<input id="nd" data-live="newDest" data-sug="1" autocomplete="off" enterkeyhint="search" value="'+esc(S.newDest||'')+'"></label>'
@@ -609,7 +609,7 @@ async function mkDest(h){if(S.busy)return;if(h)return mkDest0(h);var q=(S.newDes
  S.busy=true;S.building='';S.err2='';S.cands=null;S.note2='';render(1);var j={cands:[]};try{j=await api('GET','/api/resolve?q='+encodeURIComponent(q))}catch(e){}S.busy=false;
  var c=j.cands||[];if(!c.length){S.err2='לא מצאתי מקום בשם "'+q+'". בדקו את האיות, או בחרו מהרשימה למטה.';return render(1)}
  if(c.length===1&&!j.guessed&&c[0].n.replace(/\s+/g,'')===q.replace(/\s+/g,''))return mkDest0(candH(c[0]));S.cands={q:q,list:c,guessed:!!j.guessed};render(1)}
-async function mkDest0(h){if(S.busy)return;var wasAb=S.abroad,old='',q=((h&&h.name)||S.newDest||'').trim().slice(0,60);S.cands=null;if(SHEET==='dest')SHEET=null;
+async function mkDest0(h){if(S.busy)return;S.destPicked=true;var wasAb=S.abroad,old='',q=((h&&h.name)||S.newDest||'').trim().slice(0,60);S.cands=null;if(SHEET==='dest')SHEET=null;
  if(!q){S.err2='כתבו שם של יעד.';return render(1)}
  if((h&&h.il)||(!S.abroad&&!(h&&(h.code||h.abroad)))){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv&&thin(hv))old=hv;else if(hv){S.note2=wasAb?esc(DEST[hv].n)+' בישראל, אז עברנו לטיול בארץ.':'';S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
  if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have&&thin(have))old=have;else if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
@@ -831,7 +831,7 @@ document.addEventListener('click',function(e){var a=e.target.closest('a[data-par
  else if(act==='newtrip'){ev('new_trip');if(!window.confirm||confirm('להתחיל טיול חדש? היעד, התאריכים, הטיסה, המסלול והתקציב יתאפסו. בני המשפחה והיעדים שבניתם נשמרים.'+(TRIP?' הטיול משותף, והאיפוס יחול גם אצל מי שמתכנן אתכם.':''))){
   var td=new Date(Date.now()+30*864e5);['sel','cust','pdone','myHotel','mhOpts','planRes','pack','pnote'].forEach(function(k){S[k]=k==='sel'?{}:null});
   S.custDest='';S.planTxt='';S.planMsg='';S.pday=-1;S.fDep='';S.fPrice='';S.ticketNo='';S.ticketCode='';S.flight=0;S.wazeMin='';S.exp=[];S.budget='';S.newDest='';S.err2='';S.direct=false;S.nights=4;
-  S.date=td.getFullYear()+'-'+('0'+(td.getMonth()+1)).slice(-2)+'-'+('0'+td.getDate()).slice(-2);S.abroad=true;S.dest='rome';S.tab='family';try{history.replaceState(null,'','#family')}catch(x){}render()}}
+  S.date=td.getFullYear()+'-'+('0'+(td.getMonth()+1)).slice(-2)+'-'+('0'+td.getDate()).slice(-2);S.abroad=true;S.dest='rome';S.destPicked=false;S.tab='family';try{history.replaceState(null,'','#family')}catch(x){}render()}}
  else if(act==='start'){ev('start');S.started=true;S.wJoin=false;S.tab='family';render()}
  else if(act==='wjopen'){S.wJoin=true;S.wMsg='';render(1)}
  else if(act==='wjoin'){var jm=String(S.wJoinTxt||'').match(/join=([A-Za-z0-9_-]{24,48})/);if(!jm){S.wMsg='לא מצאתי קישור תקין. הדביקו את הקישור המלא שקיבלתם.';render(1)}else{TRIP=jm[1];try{localStorage.setItem('haniago_trip',TRIP)}catch(x){}S.started=true;S.wJoin=false;dbLast='';pullTrip().then(function(){S.started=true;render()})}}
@@ -890,7 +890,7 @@ function dlHtml(q){q=String(q||'').trim();var L=dlItems().map(function(x,i){retu
  var bq=q?'<button data-act="mkdest" class="'+(L.length?'':'pri')+'" style="flex-basis:100%">'+(L.length?'לא ברשימה? חיפוש ':'חיפוש ובנייה של ')+'"'+esc(q)+'"</button>':'';
  if(!L.length)return bq+'<p class="note" style="flex-basis:100%">אין ברשימה יעד בשם הזה. בלחיצה על הכפתור נבדוק למה התכוונתם ונבנה אותו.</p>';var h=bq,lt='';
  L.forEach(function(o){var f=o.x.n.charAt(0);if(!q&&f!==lt){lt=f;h+='<span class="lt">'+esc(f)+'</span>'}var on=o.x.key?S.dest===o.x.key:DEST[S.dest]&&DEST[S.dest].n===o.x.n;var bl=S.busy&&S.building===o.x.n;h+='<button data-act="dlpick" data-i="'+o.i+'" class="'+(on||bl?'on':o.x.ready?'':'nb')+'"'+(S.busy?' disabled':'')+'>'+esc(o.x.n)+(bl?' · בונים…':o.x.ready||o.x.key?'':' ⏳')+'</button>'});return h}
-function dlPick(i){var x=dlItems()[i];if(!x)return;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];SHEET=null;return render(1)}
+function dlPick(i){var x=dlItems()[i];if(!x)return;S.destPicked=true;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];SHEET=null;return render(1)}
  var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';SHEET=null;render(1);return}
  mkDest(x.il?{name:x.n,il:true}:{name:x.n,code:x.code,abroad:true})}
 function tixList(days){var out=[],seen={},tx=S.tix||{};(days||[]).forEach(function(day,i){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){if(s.adv&&!seen[s.n]&&!tx[s.n]){seen[s.n]=1;out.push({s:s,i:i})}})});return out}
@@ -944,7 +944,7 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
  else if(act==='ownopen'){S.ownOpen=d.k;render(1);jump('c-own')}
  else if(act==='ownx'){S.ownOpen='';S.planRes=null;S.shareIn=null;render(1)}
  else if(act==='destopen'){loadDl();SHEET='dest';S.cands=null;S.err2='';S.note2='';render(1);setTimeout(function(){var q=document.getElementById('nd');if(q)q.focus()},80)}
- else if(act==='mydest'){S.dest=d.k;S.sel={};S.newDest='';S.err2='';S.cands=null;SHEET=null;render(1)}
+ else if(act==='mydest'){S.destPicked=true;S.dest=d.k;S.sel={};S.newDest='';S.err2='';S.cands=null;SHEET=null;render(1)}
  else if(act==='calok'){if(CAL.a&&CAL.b){S.date=CAL.a;S.nights=Math.round((new Date(CAL.b+'T12:00')-new Date(CAL.a+'T12:00'))/864e5)}CAL=null;render(1)}
  else if(act==='dlpick')dlPick(+d.i);
  else if(act==='camguide'){SHEET='cam';ev('cam_guide');render(1)}

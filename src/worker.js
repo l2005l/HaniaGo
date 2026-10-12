@@ -308,6 +308,7 @@ async function postDest(req, env) {
   const k = code ? 'code:' + code : (il ? 'il:' : '') + q.toLowerCase();
   const hit = await env.DB.prepare('SELECT json FROM dests WHERE k=?').bind(k).first();
   const prev = hit ? JSON.parse(hit.json) : null;
+  if (prev && code && HEBN[code]) prev.n = HEBN[code];
   if (prev && !(prev.ai && !prev.v)) return json({ dest: prev });
   if (!env.AI) return prev ? json({ dest: prev }) : json({ error: 'unavailable' }, 503);
   if (await bump(env, 'dest:' + d + ':' + today()) > 8) return json({ error: 'limit' }, 429);
@@ -316,6 +317,7 @@ async function postDest(req, env) {
   for (let i = 0; i < 2 && !dest; i++) { raw = await askJson(env, MKDEST, input); if (raw && raw.error) break; dest = cleanDest(raw, hint); }
   if (!dest && prev) return json({ dest: prev });
   if (!dest) return json({ error: raw && raw.error ? 'not_found' : 'build_failed' }, 422);
+  if (/[\u0590-\u05FF]/.test(q)) dest.n = q.slice(0, 60); else if (code && HEBN[code]) dest.n = HEBN[code];
   await env.DB.prepare('INSERT OR REPLACE INTO dests (k,json,ts) VALUES (?,?,?)').bind(k, JSON.stringify(dest), Date.now()).run();
   return json({ dest });
 }
@@ -530,12 +532,13 @@ async function tpCity(term, locale) {
   } catch { return []; }
 }
 // One candidate per real place: Israel gets il, abroad gets the city's IATA code from the flight search.
+const HEBN = Object.fromEntries(DESTLIST.filter((x) => x.code).map((x) => [x.code, x.n]));
 async function candFrom(name, en) {
   const out = [];
   for (const x of (await tpCity(name, 'he')).concat(en ? await tpCity(en, 'en') : [])) {
     if (out.some((o) => o.code === x.code)) continue;
     const il = /israel|ישראל/i.test(x.country);
-    out.push({ n: x.name, country: x.country, code: il ? '' : x.code, il: il ? 1 : 0, la: x.la, lo: x.lo });
+    out.push({ n: HEBN[x.code] || x.name, country: x.country, code: il ? '' : x.code, il: il ? 1 : 0, la: x.la, lo: x.lo });
   }
   if (out.length) return out.slice(0, 3);
   for (const x of await nomCities(name)) {
@@ -543,7 +546,7 @@ async function candFrom(name, en) {
     if (x.country_only) {
       for (const t of (await tpCity(x.en, 'he')).concat(await tpCity(x.en, 'en'))) {
         if (out.some((o) => o.code === t.code) || /israel|ישראל/i.test(t.country)) continue;
-        out.push({ n: t.name, country: t.country || x.n, code: t.code, il: 0, la: t.la, lo: t.lo });
+        out.push({ n: HEBN[t.code] || t.name, country: x.n || t.country, code: t.code, il: 0, la: t.la, lo: t.lo });
         if (out.length >= 3) break;
       }
       continue;
@@ -557,7 +560,7 @@ async function candFrom(name, en) {
 }
 async function getResolve(req, env, url) {
   const q = str(url.searchParams.get('q'), 60).trim(); if (q.length < 2) return json({ cands: [] });
-  const k = 'res2:' + q.toLowerCase(), hit = await cacheGet(env, k); if (hit) return json(hit);
+  const k = 'res3:' + q.toLowerCase(), hit = await cacheGet(env, k); if (hit) return json(hit);
   if (await bump(env, 'geo:' + today()) > 2000) return json({ cands: [], reason: 'limit' });
   let cands = await candFrom(q, ''), guessed = false;
   if (!cands.length) {
