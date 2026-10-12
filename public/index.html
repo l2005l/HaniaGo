@@ -579,20 +579,25 @@ var ILP=['תל אביב-יפו','חיפה','עכו','נהריה וראש הנק�
 function skyPax(){var ad=0,ch=[];S.fam.forEach(function(m){var g=+m.a||0;if(g<16)ch.push(g);else ad++});ad=Math.max(1,ad);return 'adults='+ad+'&adultsv2='+ad+(ch.length?'&childrenv2='+ch.join('%7C'):'')}
 function aviaUrl(d){var f=function(s){return s.slice(8,10)+s.slice(5,7)},p=pax(),px=String(Math.max(1,p.a))+((p.c||p.inf)?String(p.c):'')+(p.inf?String(p.inf):'');return 'https://www.aviasales.com/search/TLV'+f(S.date)+String(d.code).toUpperCase()+f(addDays(S.date,nights()))+px+'?marker='+TPM+'&locale=he&currency=ils'}
 function drawSug(){var el=document.getElementById('sug');if(!el||!el.style)return;el.innerHTML=PLACES.slice(0,6).map(function(p,i){return '<button data-act="placepick" data-i="'+i+'" style="justify-content:space-between;gap:8px"><span>'+esc(p.name)+'</span><span class="note">'+(p.code?esc(p.country)+' · '+esc(p.code):'ישראל')+'</span></button>'}).join('')}
-function vFamily(){var ab=S.abroad;
- loadDl();var card='<div class="card"><h3>'+(ab?'לאן בעולם':'לאן בארץ')+'</h3><p class="note">'+(ab?'בוחרים מהרשימה או מקלידים שם של עיר. יעד שלא ברשימה אפשר לבנות לפי השם. ':'בוחרים מהרשימה או מקלידים שם של עיר, אזור או אתר. יעד שלא ברשימה אפשר לבנות לפי השם. ')+'רשימת האטרקציות נבנית על ידי בינה מלאכותית ומסומנת כלא מאומתת, עד שמצטברים טיפים מהקהילה.</p>'
-  +'<label for="nd">חיפוש יעד<input id="nd" data-live="newDest" data-sug="1" autocomplete="off" value="'+esc(S.newDest||'')+'"></label><div id="sug" class="sec"></div>'
-  +(S.busy&&!S.building?'<p class="note" role="status">מחפש את המקום…</p>':'')+(S.busy&&S.building?'<p class="note" role="status">בונה את '+esc(S.building)+'… זה לוקח עד חצי דקה.</p>':'')+(S.cands?'<div class="stop"><b>'+(S.cands.guessed?'לא מצאתי "'+esc(S.cands.q)+'". התכוונתם ל:':'יש כמה מקומות בשם הזה:')+'</b><div class="row">'+S.cands.list.map(function(c,i){return '<button data-act="candpick" data-i="'+i+'">'+esc(c.n)+(c.country?' · '+esc(c.il?'ישראל':c.country):'')+'</button>'}).join('')+'</div><button data-act="candx" style="min-height:40px">אף אחד מאלה</button></div>':'')+(S.note2?'<p class="note" role="status">'+S.note2+'</p>':'')+(S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')
-  +'<button data-act="mkdest">'+(S.busy?'בונה את היעד…':'בניית יעד לפי השם')+'</button>'
-  +'<h3>'+(ab?'כל היעדים בחו״ל':'כל היעדים בארץ')+'</h3><p class="note">מסודר לפי א״ב. ההקלדה בשדה למעלה מסננת גם את הרשימה. יעד שמסומן ⏳ נבנה ברגע הבחירה, תוך כחצי דקה.</p><div id="dl" class="dl">'+dlHtml('')+'</div></div>';
- return vFamily0().replace('<label for="dest">יעד<select','<label for="dest">היעדים שלי<select').replace('<div class="card"><div class="sp"><h3>מי נוסע</h3>',function(m){return card+readyCard()+m})}
+function vFamily(){var d=D();
+ var pick='<button class="datebtn" id="destbtn" data-act="destopen"><span>יעד</span>'+esc(d.n)+(d.ai?' <span>· נבנה בבינה מלאכותית</span>':'')+' ▾</button>'
+  +(S.busy&&S.building?'':S.err2?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')+(S.note2?'<p class="note" role="status">'+S.note2+'</p>':'');
+ return vFamily0().replace(/<label for="dest">יעד<select[\s\S]*?<\/select><\/label>/,function(){return pick}).replace('<div class="card"><div class="sp"><h3>מי נוסע</h3>',function(m){return readyCard()+m})}
+function destSheet(){var ab=S.abroad,mine=Object.keys(DEST).filter(function(k){return !!DEST[k].abroad===!!ab&&k!=='view'});
+ return '<div class="calm" role="dialog" aria-modal="true" aria-label="בחירת יעד"><div class="calc" style="height:88vh"><div class="sp"><h3>'+(ab?'לאן בעולם?':'לאן בארץ?')+'</h3><button class="x" data-act="sheetx" aria-label="סגירה">✕</button></div>'
+ +'<label for="nd">חיפוש יעד<input id="nd" data-live="newDest" data-sug="1" autocomplete="off" enterkeyhint="search" value="'+esc(S.newDest||'')+'"></label>'
+ +(S.busy&&!S.building?'<p class="note" role="status">מחפש את המקום…</p>':'')+(S.cands?'<div class="stop"><b>'+(S.cands.guessed?'לא מצאתי "'+esc(S.cands.q)+'". התכוונתם ל:':'יש כמה מקומות בשם הזה:')+'</b><div class="row">'+S.cands.list.map(function(c,i){return '<button data-act="candpick" data-i="'+i+'">'+esc(c.n)+(c.country?' · '+esc(c.il?'ישראל':c.country):'')+'</button>'}).join('')+'</div><button data-act="candx" style="min-height:40px">אף אחד מאלה</button></div>':'')+(S.err2&&!S.busy?'<p class="err" role="alert">'+esc(S.err2)+'</p>':'')
+ +'<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px">'
+ +(mine.length?'<div><p class="note" style="margin:0 0 6px"><b>היעדים שלי</b></p><div class="dl">'+mine.map(function(k){return '<button data-act="mydest" data-k="'+k+'" class="'+(k===S.dest?'on':'')+'">'+esc(DEST[k].n)+'</button>'}).join('')+'</div></div>':'')
+ +'<div id="sug" class="sec"></div><div><p class="note" style="margin:0 0 6px"><b>'+(ab?'כל היעדים בחו״ל':'כל היעדים בארץ')+'</b> · ⏳ נבנה ברגע הבחירה</p><div id="dl" class="dl">'+dlHtml(S.newDest||'')+'</div></div></div>'
+ +'<button data-act="mkdest">'+(S.busy?'מחפש…':'לא ברשימה? בניית יעד לפי השם שהקלדתם')+'</button><p class="note" style="margin:0">האטרקציות ביעדים שנבנים נכתבות על ידי בינה מלאכותית ומסומנות כלא מאומתות.</p></div></div>'}
 function thin(k){var x=DEST[k];return !!(x&&x.ai&&S.custom[k]&&!x.v)}
 function candH(c){return c.il?{name:c.n,il:true,la:c.la,lo:c.lo}:{name:c.n,code:c.code,la:c.la,lo:c.lo,abroad:true}}
 async function mkDest(h){if(S.busy)return;if(h)return mkDest0(h);var q=(S.newDest||'').trim().slice(0,60);if(!q){S.err2='כתבו שם של יעד.';return render(1)}
  S.busy=true;S.building='';S.err2='';S.cands=null;S.note2='';render(1);var j={cands:[]};try{j=await api('GET','/api/resolve?q='+encodeURIComponent(q))}catch(e){}S.busy=false;
  var c=j.cands||[];if(!c.length){S.err2='לא מצאתי מקום בשם "'+q+'". בדקו את האיות, או בחרו מהרשימה למטה.';return render(1)}
  if(c.length===1&&!j.guessed)return mkDest0(candH(c[0]));S.cands={q:q,list:c,guessed:!!j.guessed};render(1)}
-async function mkDest0(h){if(S.busy)return;var wasAb=S.abroad,old='',q=((h&&h.name)||S.newDest||'').trim().slice(0,60);S.cands=null;
+async function mkDest0(h){if(S.busy)return;var wasAb=S.abroad,old='',q=((h&&h.name)||S.newDest||'').trim().slice(0,60);S.cands=null;if(SHEET==='dest')SHEET=null;
  if(!q){S.err2='כתבו שם של יעד.';return render(1)}
  if((h&&h.il)||(!S.abroad&&!(h&&(h.code||h.abroad)))){h=h||{};h.il=true;var hv=Object.keys(DEST).filter(function(k){return !DEST[k].abroad&&DEST[k].n===q})[0];if(hv&&thin(hv))old=hv;else if(hv){S.note2=wasAb?esc(DEST[hv].n)+' בישראל, אז עברנו לטיול בארץ.':'';S.dest=hv;S.abroad=false;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
  if(h&&h.code){var have=Object.keys(DEST).filter(function(k){return DEST[k].code===h.code&&DEST[k].abroad})[0];if(have&&thin(have))old=have;else if(have){S.dest=have;S.abroad=true;S.sel={};S.newDest='';S.err2='';PLACES=[];return render()}}
@@ -776,6 +781,7 @@ document.addEventListener('change',function(e){var t=e.target,d=t.dataset;
  if(d.tix!==undefined){S.tix=S.tix||{};S.tix[d.tix]=t.checked;render(1);return}
  if(d.f){S[d.f]=t.type==='checkbox'?t.checked:t.value;render(1)}});
 document.addEventListener('change',function(e){if(!e.target.dataset||!e.target.dataset.end)return;var a=new Date(S.date+'T12:00'),b=new Date(e.target.value+'T12:00');if(isNaN(a)||isNaN(b))return;S.nights=Math.max(1,Math.min(14,Math.round((b-a)/864e5)));render(1)});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='nd'){e.preventDefault();mkDest(null)}});
 document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.dataset.live;if(k)S[k]=e.target.value;if(e.target.id==='nd'){var dl=document.getElementById('dl');if(dl)dl.innerHTML=dlHtml(e.target.value)}
  if(e.target.dataset&&e.target.dataset.sug&&!S.abroad){var ql=e.target.value.trim();PLACES=ql.length<2?[]:ILP.filter(function(n){return n.indexOf(ql)>=0}).map(function(n){return{name:n,il:true}});drawSug()}
  if(e.target.dataset&&e.target.dataset.sug&&S.abroad){clearTimeout(plT);var q=e.target.value.trim();plT=setTimeout(function(){if(q.length<2){PLACES=[];drawSug();return}api('GET','/api/places?q='+encodeURIComponent(q)).then(function(j){PLACES=j.places||[];drawSug()}).catch(function(){})},300)}});
@@ -864,10 +870,10 @@ function calHtml(){if(!CAL)return '';var y=+CAL.m.slice(0,4),mo=+CAL.m.slice(5,7
 function loadDl(){if(DL&&DL.at>Date.now()-6*3600e3)return;var at=Date.now();DL=DL||{list:[],at:0};DL.at=at;api('GET','/api/destlist').then(function(j){DL={list:j.list||[],at:at};try{localStorage.setItem('haniago_dl',JSON.stringify(DL))}catch(e){}var el=document.getElementById('dl'),q=document.getElementById('nd');if(el)el.innerHTML=dlHtml(q?q.value:'')}).catch(function(){})}
 function dlItems(){var L=DL&&DL.list&&DL.list.length?DL.list:POP.map(function(p){return {n:p[0],code:p[1],il:0,ready:false}}).concat(ILP.map(function(n){return {n:n,il:1,ready:false}}));return L.filter(function(x){return !!x.il===!S.abroad})}
 function dlHtml(q){q=String(q||'').trim();var L=dlItems().map(function(x,i){return {x:x,i:i}}).filter(function(o){return !q||o.x.n.indexOf(q)>=0});L.sort(function(a,b){return a.x.n.localeCompare(b.x.n,'he')});
- if(!L.length)return '<p class="note">אין ברשימה יעד בשם הזה. אפשר לבנות אותו בכפתור "בניית יעד לפי השם".</p>';var h='',lt='';
+ if(!L.length)return '<p class="note">אין ברשימה יעד בשם הזה. אפשר לבנות אותו בכפתור למטה.</p>';var h='',lt='';
  L.forEach(function(o){var f=o.x.n.charAt(0);if(!q&&f!==lt){lt=f;h+='<span class="lt">'+esc(f)+'</span>'}var on=o.x.key?S.dest===o.x.key:DEST[S.dest]&&DEST[S.dest].n===o.x.n;var bl=S.busy&&S.building===o.x.n;h+='<button data-act="dlpick" data-i="'+o.i+'" class="'+(on||bl?'on':o.x.ready?'':'nb')+'"'+(S.busy?' disabled':'')+'>'+esc(o.x.n)+(bl?' · בונים…':o.x.ready||o.x.key?'':' ⏳')+'</button>'});return h}
-function dlPick(i){var x=dlItems()[i];if(!x)return;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];return render(1)}
- var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';render(1);return}
+function dlPick(i){var x=dlItems()[i];if(!x)return;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];SHEET=null;return render(1)}
+ var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';SHEET=null;render(1);return}
  mkDest(x.il?{name:x.n,il:true}:{name:x.n,code:x.code,abroad:true})}
 function tixList(days){var out=[],seen={},tx=S.tix||{};(days||[]).forEach(function(day,i){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){if(s.adv&&!seen[s.n]&&!tx[s.n]){seen[s.n]=1;out.push({s:s,i:i})}})});return out}
 function tixCard(days,d){var all=[],seen={};days.forEach(function(day,i){((day.chosen&&day.chosen.stops)||[]).forEach(function(s){if(s.adv&&!seen[s.n]){seen[s.n]=1;all.push({s:s,i:i})}})});if(!all.length)return '';var tx=S.tix||{};
@@ -906,7 +912,7 @@ var CAMS={xi:['שיאומי, רדמי, פוקו',['פותחים את אפליק�
  sa:['סמסונג',['פותחים את אפליקציית המצלמה.','לוחצים על גלגל השיניים, בדרך כלל בפינה למעלה.','מפעילים את "תגי מיקום".','אם נשאלים, מאשרים למצלמה גישה למיקום.']],
  ip:['אייפון',['פותחים את ההגדרות של הטלפון.','"פרטיות ואבטחה", ואז "שירותי מיקום".','בוחרים "מצלמה" ומסמנים "בזמן השימוש ביישום".','מפעילים גם את "מיקום מדויק" באותו מסך.']],
  px:['פיקסל ואחרים',['פותחים את אפליקציית המצלמה.','נכנסים להגדרות המצלמה.','מפעילים את "שמירת מיקום" או "תיוג מיקום".','אם נשאלים, מאשרים למצלמה גישה למיקום.']]};
-function sheetHtml(){if(SHEET!=='cam')return '';var b=S.camBrand||camBrand(),c=CAMS[b];
+function sheetHtml(){if(SHEET==='dest')return destSheet();if(SHEET!=='cam')return '';var b=S.camBrand||camBrand(),c=CAMS[b];
  return '<div class="calm" role="dialog" aria-modal="true" aria-label="הפעלת מיקום במצלמה"><div class="calc"><div class="sp"><h3>מיקום בתמונות</h3><button class="x" data-act="sheetx" aria-label="סגירה">✕</button></div><p class="note">כשהמצלמה שומרת מיקום, סרטון הטיול יודע איפה צולמה כל תמונה ומציג את שם המקום ואת המפה. אפליקציה לא יכולה לשנות את ההגדרה הזאת בעצמה, ולכן מפעילים פעם אחת ידנית:</p>'
  +'<div class="seg">'+Object.keys(CAMS).map(function(k){return '<button data-act="cambrand" data-b="'+k+'" class="'+(k===b?'on':'')+'">'+CAMS[k][0]+'</button>'}).join('')+'</div>'
  +'<ol class="steps2">'+c[1].map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol><p class="note">השמות יכולים להשתנות מעט בין דגמים. בדיקה: מצלמים תמונה ובודקים בפרטים שלה שמופיע מיקום.</p>'
@@ -917,6 +923,8 @@ document.addEventListener('click',function(e){var b=e.target.closest('button');i
  if(act==='calopen'){CAL={a:S.date,b:addDays(S.date,nights()),m:S.date.slice(0,7)};render(1)}
  else if(act==='calnav'){var dt=new Date(CAL.m+'-01T12:00');dt.setMonth(dt.getMonth()+(+d.d));CAL.m=dt.getFullYear()+'-'+p2(dt.getMonth()+1);render(1)}
  else if(act==='calx'){CAL=null;render(1)}
+ else if(act==='destopen'){loadDl();SHEET='dest';S.cands=null;S.err2='';S.note2='';render(1);setTimeout(function(){var q=document.getElementById('nd');if(q)q.focus()},80)}
+ else if(act==='mydest'){S.dest=d.k;S.sel={};S.newDest='';S.err2='';S.cands=null;SHEET=null;render(1)}
  else if(act==='calok'){if(CAL.a&&CAL.b){S.date=CAL.a;S.nights=Math.round((new Date(CAL.b+'T12:00')-new Date(CAL.a+'T12:00'))/864e5)}CAL=null;render(1)}
  else if(act==='dlpick')dlPick(+d.i);
  else if(act==='camguide'){SHEET='cam';ev('cam_guide');render(1)}
