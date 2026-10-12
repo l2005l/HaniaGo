@@ -95,7 +95,7 @@ async function build(picked,demo){
   photos.sort(function(a,b){return (a.time||8e15)-(b.time||8e15)||a.order-b.order});
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
-  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+(geo<photos.length&&!demo?' · יש שדה מיקום ריק: '+photos.filter(function(p){return p.gps&&p.lat==null}).length+' · אין שדה מיקום בכלל: '+photos.filter(function(p){return !p.gps}).length:'')+
+  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+
     (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> הסרטון ייבנה לפי תאריכי הצילום, ואם שמרתם מסלול ב-HaniaGo, גם לפי המקומות שבו. בטיול הבא כדאי להפעיל שמירת מיקום בהגדרות המצלמה.'+(fromShare?(photos.some(function(p){return p.gps})?' הגלריה הסירה את המיקום: בדקו בהגדרות השיתוף שלה שהאפשרות "הסרת מיקום" כבויה.':' המצלמה לא שמרה מיקום בתמונות האלה.'):' ייתכן שהמצלמה לא שמרה מיקום, או שהטלפון הסיר אותו כי התמונות נבחרו מתוך אתר. שיתוף מהגלריה ל-HaniaGo שומר על המיקום.'):'')+span());
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
@@ -206,7 +206,7 @@ function drawScene(x,o,u){
       x.fillStyle='rgba(255,255,255,.96)';roundRect(x,70,H/2+60,W-140,300,32);x.fill();
       text(x,'את הטיול הזה תכננו ב-',W/2,H/2+128,'600 32px Assistant, sans-serif',INK);
       text(x,'HaniaGo',W/2,H/2+210,'700 76px Rubik, Assistant, sans-serif',SEA);
-      text(x,'תכנון טיול משפחתי, מהבית ועד המלון',W/2,H/2+262,'600 28px Assistant, sans-serif',INK);
+      text(x,'תכנון טיולים, מהבית ועד המלון',W/2,H/2+262,'600 28px Assistant, sans-serif',INK);
       text(x,'go.hania360.com',W/2,H/2+318,'700 34px Assistant, sans-serif',SEA)}
     return}
   if(o.k==='chapter')drawChapter(x,o.h,u,B)}

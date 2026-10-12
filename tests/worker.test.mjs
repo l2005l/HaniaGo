@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage, mapWhere } from '../src/worker.js';
+import { dueMessage, ilNow, vapidHeader, okEndpoint, cleanTrip } from '../src/push.js';
+import worker, { groupReports, mapFlights, matchOffers, cleanDest, looseJson, mapPlaces, cleanNotes, mapGeo, parseMapLink, mapTrain, mapWeather, tripKey, mapSpecial, sumEvents, placeName, coordsInPage, mapWhere, prebuild, runReminders } from '../src/worker.js';
 
 function fakeD1() {
   const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'));
+  for (const f of readdirSync(new URL('../migrations/', import.meta.url)).sort()) db.exec(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'));
   const stmt = (sql, args) => ({
     bind: (...a) => stmt(sql, a),
     first: async () => db.prepare(sql).get(...args) ?? null,
@@ -291,4 +292,69 @@ test('sharing a link to HaniaGo without the service worker still opens the app w
   const f2 = new FormData(); f2.append('photos', new File([new Uint8Array([1, 2, 3])], 'a.jpg', { type: 'image/jpeg' }));
   const r2 = await worker.fetch(new Request('https://go.hania360.com/share-in', { method: 'POST', body: f2 }), env);
   assert.equal(r2.headers.get('location'), '/lab/video.html?shared=lost');
+});
+
+test('reminders follow the trip calendar in Israel time and are sent once', () => {
+  const trip = { dest: 'רומא', abroad: true, date: '2026-11-15', nights: 3, days: [['הקולוסיאום'], ['הוותיקן', 'פיאצה נבונה'], ['גני בורגזה'], []], camOk: false };
+  assert.equal(dueMessage(trip, { day: '2026-11-12', hour: 9 }), null);
+  assert.equal(dueMessage(trip, { day: '2026-11-12', hour: 10 }).key, 'cam');
+  assert.equal(dueMessage({ ...trip, camOk: true }, { day: '2026-11-12', hour: 10 }), null);
+  assert.equal(dueMessage(trip, { day: '2026-11-14', hour: 18 }).key, 'pre');
+  const n0 = dueMessage(trip, { day: '2026-11-15', hour: 20 });
+  assert.equal(n0.key, 'night0'); assert.match(n0.body, /הוותיקן ואחר כך פיאצה נבונה/);
+  assert.match(dueMessage(trip, { day: '2026-11-15', hour: 21 }, [], true).body, /צפוי גשם/);
+  assert.equal(dueMessage(trip, { day: '2026-11-15', hour: 22 }, ['night0']), null);
+  assert.equal(dueMessage(trip, { day: '2026-11-18', hour: 20 }), null, 'no evening note on the way home');
+  assert.equal(dueMessage(trip, { day: '2026-11-19', hour: 11 }).url, '/lab/video.html');
+  assert.deepEqual(ilNow(Date.parse('2026-11-15T18:30:00Z')), { day: '2026-11-15', hour: 20 });
+  assert.equal(cleanTrip({ date: 'x', nights: 99 }).nights, 14);
+});
+
+test('push endpoints are limited to real push services, and the VAPID token verifies', async () => {
+  assert.equal(okEndpoint('https://fcm.googleapis.com/fcm/send/abc'), true);
+  assert.equal(okEndpoint('https://web.push.apple.com/abc'), true);
+  assert.equal(okEndpoint('https://evil.example/fcm.googleapis.com'), false);
+  assert.equal(okEndpoint('http://fcm.googleapis.com/x'), false);
+  const env = { DB: fakeD1() };
+  const h = await vapidHeader(env, 'https://fcm.googleapis.com/fcm/send/abc', Date.parse('2026-11-15T10:00:00Z'));
+  const [, t, k] = h.match(/^vapid t=([^,]+), k=(.+)$/);
+  const [hd, pl, sig] = t.split('.'), dec = (x) => Buffer.from(x, 'base64url');
+  assert.equal(JSON.parse(dec(pl)).aud, 'https://fcm.googleapis.com');
+  const pub = await crypto.subtle.importKey('raw', dec(k), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+  assert.equal(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pub, dec(sig), new TextEncoder().encode(hd + '.' + pl)), true);
+  assert.equal((await vapidHeader(env, 'https://fcm.googleapis.com/x')).split('k=')[1], k, 'the key pair is made once');
+});
+
+test('a subscribed phone is woken for its reminder and then reads it', async () => {
+  const env = { DB: fakeD1() }, ep = 'https://fcm.googleapis.com/fcm/send/abc', real = globalThis.fetch, woke = [];
+  globalThis.fetch = async (u, o) => { if (String(u).startsWith(ep)) { woke.push(o.headers.Authorization); return new Response('', { status: 201 }); } return new Response(JSON.stringify({ daily: { time: [], precipitation_probability_max: [] } })); };
+  try {
+    const sub = (trip) => call(env, 'POST', '/api/push/sub', { body: { sub: { endpoint: ep }, trip } });
+    assert.equal((await call(env, 'POST', '/api/push/sub', { body: { sub: { endpoint: 'https://evil.example/x' }, trip: {} } })).status, 400);
+    await sub({ dest: 'רומא', abroad: true, date: '2026-11-15', nights: 3, la: 41.9, lo: 12.5, days: [['הקולוסיאום'], ['הוותיקן']] });
+    assert.equal(await runReminders(env, Date.parse('2026-11-14T16:00:00Z')), 1);
+    assert.equal(woke.length, 1); assert.match(woke[0], /^vapid t=/);
+    const m = await (await call(env, 'POST', '/api/push/msg', { body: { endpoint: ep } })).json();
+    assert.equal(m.title, 'מחר טסים לרומא'); assert.equal(m.url, '/#leave');
+    assert.equal(await runReminders(env, Date.parse('2026-11-14T17:00:00Z')), 0, 'not twice');
+    assert.equal(await runReminders(env, Date.parse('2026-11-15T18:00:00Z')), 1);
+    assert.match((await (await call(env, 'POST', '/api/push/msg', { body: { endpoint: ep } })).json()).body, /הוותיקן/);
+    globalThis.fetch = async () => new Response('', { status: 410 });
+    await runReminders(env, Date.parse('2026-11-19T09:00:00Z'));
+    assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM push_subs').get().n, 0, 'a gone subscription is removed');
+    assert.equal((await (await call(env, 'GET', '/api/push/key')).json()).key.length > 80, true);
+  } finally { globalThis.fetch = real; }
+});
+
+test('the destination list says which places are ready, and the hourly job builds missing ones', async () => {
+  let asked = 0;
+  const env = { DB: fakeD1(), AI: { run: async () => { asked++; return { response: JSON.stringify({ n: 'לונדון', en: 'London', at: [1, 2, 3].map((i) => ({ n: 'מקום ' + i, la: 51.5 + i / 100, lo: -0.1, who: i === 3 ? 'adults' : 'all', adv: i === 1 ? 1 : 0, in: 1 })) }) }; } } };
+  let l = (await (await call(env, 'GET', '/api/destlist')).json()).list;
+  assert.equal(l.find((x) => x.n === 'רומא').ready, true); assert.equal(l.find((x) => x.n === 'לונדון').ready, false);
+  assert.equal(await prebuild(env, 1), 1); assert.equal(asked, 1);
+  const d = JSON.parse(env.DB.raw.prepare("SELECT json FROM dests WHERE k='code:LON'").get().json);
+  assert.equal(d.at[0].adv, 1); assert.equal(d.at[2].who, 'adults'); assert.equal(d.at[0].in, 1);
+  env.DB.raw.exec('DELETE FROM cache');
+  l = (await (await call(env, 'GET', '/api/destlist')).json()).list;
+  assert.equal(l.find((x) => x.n === 'לונדון').ready, true);
 });
