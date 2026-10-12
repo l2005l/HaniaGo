@@ -918,7 +918,7 @@ function dlPick(i){var x=dlItems()[i];if(!x)return;S.destPicked=true;if(x.key&&D
  var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';SHEET=null;render(1);return}
  mkDest(x.il?{name:x.n,il:true}:{name:x.n,code:x.code,abroad:true})}
 /* ---- after 20:00: an optional evening that fits who is traveling ---- */
-function crowd(){var ages=S.fam.map(function(m){return +m.a||0}),y=Math.min.apply(null,ages),avg=ages.reduce(function(t,a){return t+a},0)/Math.max(1,ages.length);return y<12?'kids':y<16?'teens':avg<=32?'young':'adults'}
+function crowd(){var ages=S.fam.map(function(m){return +m.a||0}),y=Math.min.apply(null,ages),avg=ages.reduce(function(t,a){return t+a},0)/Math.max(1,ages.length);var two=ages.length===2;return y<12?'kids':y<16?'teens':avg<=40?(two?'ycouple':'young'):(two?'couple':'adults')}
 function eveningHtml(d,i){if(legNext&&legNext()&&i===nights())return '';var n=nights(),c=crowd();if(i===n)return '';
  var near=d.hotel,mq=function(q){return 'https://www.google.com/maps/search/'+encodeURIComponent(q)+'/@'+near.la+','+near.lo+',14z?hl=iw'},en=enName(d),he=!d.abroad;
  var gyg='https://www.stay22.com/allez/getyourguide?aid='+STAY_AID+'&campaign=evening&address='+encodeURIComponent(en);
@@ -926,9 +926,11 @@ function eveningHtml(d,i){if(legNext&&legNext()&&i===nights())return '';var n=ni
  var O={young:[['ברים ומסיבות','האזורים החיים בערב, לפי הדירוג במפות',mq(he?'בר':'bars nightlife')],['מועדונים','בדרך כלל מתחילים אחרי חצות. כדאי לבדוק אירועים ותנאי כניסה',mq(he?'מועדון':'nightclub')],['סיור לילי או סיור ברים','דרך טובה להכיר אנשים ואת העיר בלילה',gyg,1]],
   adults:[['ארוחת ערב עם נוף','מסעדות מומלצות באזור',mq(he?'מסעדה עם נוף':'restaurant with a view')],['סיור לילי','סיור מודרך או שיט ערב',gyg,1],['בר יין או קוקטיילים','לסיום רגוע של היום',mq(he?'בר יין':'wine bar')]],
   teens:[['טיילת וגלידה','הליכה קצרה ליד המלון',mq(he?'גלידה':'gelato ice cream')],['מופע או סיור ערב','שווה לבדוק מה יש בתאריך הזה',gyg,1]],
+  ycouple:[['רופטופ וקוקטיילים','בר על גג עם נוף לעיר, הכי יפה בשקיעה',mq(he?'בר גג':'rooftop bar')],['מוזיקה חיה','ג׳אז, להקות ובארים עם הופעות, לפי הדירוג במפות',mq(he?'מוזיקה חיה':'live music bar')],['שיט ערב או סיור לילי','העיר באורות, בלי לתכנן',gyg,1],['מועדון','למי שרוצה להמשיך עד מאוחר. בדרך כלל אחרי חצות',mq(he?'מועדון':'nightclub')]],
+  couple:[['ארוחת ערב רומנטית','מסעדה עם נוף או אווירה, כדאי להזמין שולחן מראש',mq(he?'מסעדה רומנטית':'romantic restaurant')],['קונצרט, תיאטרון או מופע','לבדוק מה מוצג בתאריכים שלכם',gyg,1],['שיט ערב או סיור לילי רגוע','לראות את העיר באורות',gyg,1],['בר יין','לסיום רגוע של היום',mq(he?'בר יין':'wine bar')]],
   kids:[['גלידה וטיול קצר','לסיים את היום בנחת ליד המלון',mq(he?'גלידה':'gelato ice cream')],['מופע ערב למשפחות','לבדוק מראש שעות וגילים',gyg,1]]}[c];
- var title={young:'ממשיכים בלילה? ברים, מסיבות וסיורי לילה',adults:'ממשיכים לערב? ארוחה, סיור לילי או בר',teens:'המשך לערב: טיילת, גלידה או מופע',kids:'המשך לערב רגוע'}[c];
- return '<details class="stop fold"'+(c==='young'?' open':'')+'><summary><b>'+title+'</b><i class="pm" aria-hidden="true"></i></summary>'
+ var title={ycouple:'ממשיכים לערב? גג, מוזיקה חיה או סיור לילי',couple:'ממשיכים לערב? ארוחה, מופע או שיט',young:'ממשיכים בלילה? ברים, מסיבות וסיורי לילה',adults:'ממשיכים לערב? ארוחה, סיור לילי או בר',teens:'המשך לערב: טיילת, גלידה או מופע',kids:'המשך לערב רגוע'}[c];
+ return '<details class="stop fold"'+(/young|couple/.test(c)?' open':'')+'><summary><b>'+title+'</b><i class="pm" aria-hidden="true"></i></summary>'
   +own.map(function(x){return '<p><b>'+esc(x.n)+'</b> <span class="note">· '+esc(x.rec||'')+'</span></p>'}).join('')
   +O.map(function(o){return '<div class="sp" style="align-items:center;gap:8px"><span><b>'+o[0]+'</b><br><span class="note">'+o[1]+'</span></span><a class="btn" style="flex:none;min-height:40px"'+(o[3]?' data-partner="gyg"':'')+' target="_blank" rel="noopener" href="'+esc(o[2])+'">'+(o[3]?'סיורים':'במפה')+'</a></div>'}).join('')
   +'<p class="note">'+(c==='young'?'שמרו על המלון במפה ועל דרך חזרה מסודרת. ':'')+'לא נכנס לשעות ולעלות של היום.'+(O.some(function(o){return o[3]})?' סיורים: קישור שותפים, המחיר לא משתנה.':'')+'</p></details>'}
