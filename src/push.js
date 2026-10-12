@@ -57,6 +57,10 @@ export function dueMessage(trip, now, sent = [], rainTomorrow = false) {
     const next = ((trip.days || [])[off + 1] || []).filter(Boolean).slice(0, 2);
     return out('night' + off, 'מחר ב' + dest + ', יום ' + (off + 2), (rainTomorrow ? 'צפוי גשם מחר. במסלול יש אפשרות עם יותר מקומות סגורים. ' : next.length ? 'מתחילים ב' + next.join(' ואחר כך ') + '. ' : '') + 'והתמונות של היום נשמרות בגלריה לסרטון בסוף הטיול.', '/#plan');
   }
+  if (off === n && trip.abroad && trip.retDep) {
+    const [rh, rm] = trip.retDep.split(':').map(Number), leave = rh * 60 + rm - 240, at = Math.max(5, Math.floor(leave / 60) - 2);
+    if (h >= at) { const lt = Math.max(0, leave); return out('ret', 'היום חוזרים הביתה', 'הטיסה ב-' + trip.retDep + '. כדאי לצאת לשדה בסביבות ' + String(Math.floor(lt / 60)).padStart(2, '0') + ':' + String(lt % 60).padStart(2, '0') + ' ולבדוק עיכובים לפני היציאה.', '/#flight'); }
+  }
   if (off === n + 1 && h >= 11) return out('video', 'איך היה ב' + dest + '?', 'הכינו סרטון קצר מהתמונות שצילמתם, עם המפה והמקומות, ושלחו למשפחה ולחברים.', '/lab/video.html');
   return null;
 }
@@ -67,7 +71,15 @@ export function cleanTrip(t) {
   const num = (x) => (Number.isFinite(+x) ? +x : null);
   return {
     dest: s(t.dest, 40), abroad: !!t.abroad, date: /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? t.date : '', nights: Math.max(1, Math.min(14, +t.nights || 1)),
-    la: num(t.la), lo: num(t.lo), camOk: !!t.camOk,
+    la: num(t.la), lo: num(t.lo), camOk: !!t.camOk, retDep: /^\d{2}:\d{2}$/.test(t.retDep || '') ? t.retDep : '',
+    pts: Array.isArray(t.pts) ? t.pts.slice(0, 10).filter((p) => Array.isArray(p) && Number.isFinite(+p[1]) && Number.isFinite(+p[2])).map((p) => [Math.max(0, Math.min(30, +p[0] || 0)), +p[1], +p[2]]) : [],
     days: Array.isArray(t.days) ? t.days.slice(0, 15).map((d) => (Array.isArray(d) ? d.slice(0, 3).map((x) => s(x, 60)) : [])) : [],
   };
+}
+
+// Where the trip sleeps on a given day of it (0 = first day). Multi-stop trips send one point per stop.
+export function placeOn(trip, off) {
+  let p = { la: trip.la, lo: trip.lo };
+  for (const [d, la, lo] of trip.pts || []) if (off >= d) p = { la, lo };
+  return p;
 }

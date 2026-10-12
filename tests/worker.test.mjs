@@ -306,6 +306,9 @@ test('reminders follow the trip calendar in Israel time and are sent once', () =
   assert.equal(dueMessage(trip, { day: '2026-11-15', hour: 22 }, ['night0']), null);
   assert.equal(dueMessage(trip, { day: '2026-11-18', hour: 20 }), null, 'no evening note on the way home');
   assert.equal(dueMessage(trip, { day: '2026-11-19', hour: 11 }).url, '/lab/video.html');
+  const r = dueMessage({ ...trip, retDep: '14:30' }, { day: '2026-11-18', hour: 8 });
+  assert.equal(r.key, 'ret'); assert.match(r.body, /בסביבות 10:30/);
+  assert.equal(dueMessage({ ...trip, retDep: '14:30' }, { day: '2026-11-18', hour: 7 }), null, 'not before two hours ahead of leaving');
   assert.deepEqual(ilNow(Date.parse('2026-11-15T18:30:00Z')), { day: '2026-11-15', hour: 20 });
   assert.equal(cleanTrip({ date: 'x', nights: 99 }).nights, 14);
 });
@@ -399,4 +402,13 @@ test('a country typed as a destination becomes a choice of its cities', async ()
 test('/admin serves the app page', async () => {
   const env = { DB: fakeD1(), ASSETS: { fetch: async (r) => new Response('app ' + new URL(r.url).pathname) } };
   assert.equal(await (await worker.fetch(new Request('https://go.hania360.com/admin'), env)).text(), 'app /');
+});
+
+test('multi-stop rain looks at the stop you sleep in that night', async () => {
+  const { placeOn, cleanTrip } = await import('../src/push.js');
+  const t = cleanTrip({ date: '2026-11-10', nights: 7, la: 52.37, lo: 4.9, pts: [[0, 52.37, 4.9], [3, 48.86, 2.35], [5, 50.85, 4.35]] });
+  assert.deepEqual(placeOn(t, 1), { la: 52.37, lo: 4.9 });
+  assert.deepEqual(placeOn(t, 3), { la: 48.86, lo: 2.35 });
+  assert.deepEqual(placeOn(t, 6), { la: 50.85, lo: 4.35 });
+  assert.deepEqual(placeOn(cleanTrip({ date: '2026-11-10', la: 1, lo: 2 }), 4), { la: 1, lo: 2 });
 });

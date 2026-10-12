@@ -1,5 +1,5 @@
 import { DESTLIST, destKey } from './destlist.js';
-import { okEndpoint, vapid, wake, subId, ilNow, dueMessage, cleanTrip } from './push.js';
+import { okEndpoint, vapid, wake, subId, ilNow, dueMessage, cleanTrip, placeOn } from './push.js';
 import { destPage, indexPage, sitemap } from './pages.js';
 // HaniaGo API. Every external data source is optional: without its key the
 // endpoint answers {available:false} and the app falls back to its own estimate.
@@ -65,9 +65,10 @@ async function getTrip(req, env) {
 /* a read-only copy of a trip, opened by anyone who has the link; it holds no names */
 async function postShare(req, env) {
   const d = deviceOf(req); if (!d) return bad('device');
-  const body = await req.text(); if (body.length > 40000) return bad('too large', 413);
+  const body = await req.text(); if (body.length > 150000) return bad('too large', 413);
   let o; try { o = JSON.parse(body); } catch { return bad('json'); }
-  if (!o || typeof o !== 'object' || !o.dest || !Array.isArray(o.dest.at)) return bad('shape');
+  const legsOk = !o || !('legs' in o) || (Array.isArray(o.legs) && o.legs.length <= 10 && o.legs.every((l) => l && l.dest && Array.isArray(l.dest.at)));
+  if (!o || typeof o !== 'object' || !o.dest || !Array.isArray(o.dest.at) || !legsOk) return bad('shape');
   if (await bump(env, 'share:' + d + ':' + today()) > 10) return json({ error: 'limit' }, 429);
   const id = Array.from(crypto.getRandomValues(new Uint8Array(10)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
   await env.DB.prepare('INSERT INTO trips (device,state,ts) VALUES (?,?,?)').bind('s:' + id, body, Date.now()).run();
@@ -651,7 +652,7 @@ export async function runReminders(env, now = Date.now()) {
   for (const r of rows) {
     const trip = JSON.parse(r.trip), sent = JSON.parse(r.sent || '[]');
     let m = dueMessage(trip, t, sent, false);
-    if (m && m.key.startsWith('night')) m = dueMessage(trip, t, sent, await rainTomorrow(env, trip.la, trip.lo, tomorrow));
+    if (m && m.key.startsWith('night')) { const p = placeOn(trip, +m.key.slice(5) + 1); m = dueMessage(trip, t, sent, await rainTomorrow(env, p.la, p.lo, tomorrow)); }
     if (!m) continue;
     await env.DB.prepare('UPDATE push_subs SET msg=?, sent=? WHERE id=?').bind(JSON.stringify(m), JSON.stringify(sent.concat(m.key).slice(-40)), r.id).run();
     if (!(await wake(env, r.endpoint))) await env.DB.prepare('DELETE FROM push_subs WHERE id=?').bind(r.id).run();
