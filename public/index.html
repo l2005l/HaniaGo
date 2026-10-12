@@ -484,7 +484,7 @@ function vShare(){var d=D(),t=wrapText();
  +'<div class="row"><button class="pri grow" data-act="wcopy">העתקת הסיכום</button><a class="btn grow" target="_blank" rel="noopener" href="https://wa.me/?text='+encodeURIComponent(t)+'">שליחה ב-WhatsApp</a></div></div><button class="pri" data-go="community">המשך לקהילה וטיפים</button>'}
 var DEV=(function(){var k='haniago_dev',v='';try{v=localStorage.getItem(k)||''}catch(e){}
  if(!/^[a-f0-9-]{36}$/.test(v)){v=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g,function(){return (Math.random()*16|0).toString(16)});try{localStorage.setItem(k,v)}catch(e){}}return v})();
-var ADMIN='',EDUI=false;try{ADMIN=localStorage.getItem('haniago_admin')||'';if(location.hash==='#editor'){localStorage.setItem('haniago_edui','1');history.replaceState(null,'','#community')}EDUI=localStorage.getItem('haniago_edui')==='1'}catch(e){}
+var ADMIN='',EDUI=false;try{ADMIN=localStorage.getItem('haniago_admin')||'';if(/^\/admin\/?$/.test(location.pathname)){localStorage.setItem('haniago_edui','1');history.replaceState(null,'','/#community')}EDUI=localStorage.getItem('haniago_edui')==='1'}catch(e){}
 var TRIP='';try{TRIP=localStorage.getItem('haniago_trip')||''}catch(e){}
 (function(){var m=(location.hash||'').match(/^#join=([A-Za-z0-9_-]{24,48})$/);if(!m)return;try{history.replaceState(null,'',location.pathname)}catch(e){}if(m[1]!==TRIP&&window.confirm&&confirm('להצטרף לטיול משותף? הטיול ששמור במכשיר הזה יוחלף בטיול המשותף.')){TRIP=m[1];try{localStorage.setItem('haniago_trip',TRIP)}catch(e){}}})();
 async function api(method,path,body){var h={'x-device':DEV};if(ADMIN)h['x-admin']=ADMIN;if(TRIP)h['x-trip']=TRIP;if(body!==undefined)h['content-type']='application/json';

@@ -395,3 +395,8 @@ test('a country typed as a destination becomes a choice of its cities', async ()
     assert.equal(r.cands.length, 1); assert.equal(r.cands[0].n, 'אדיס אבבה'); assert.equal(r.cands[0].code, 'ADD');
   } finally { globalThis.fetch = real; }
 });
+
+test('/admin serves the app page', async () => {
+  const env = { DB: fakeD1(), ASSETS: { fetch: async (r) => new Response('app ' + new URL(r.url).pathname) } };
+  assert.equal(await (await worker.fetch(new Request('https://go.hania360.com/admin'), env)).text(), 'app /');
+});

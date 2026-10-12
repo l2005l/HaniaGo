@@ -678,6 +678,7 @@ export default {
     if (url.pathname === '/d' || url.pathname === '/d/') return html(indexPage());
     if (url.pathname.startsWith('/d/')) { const pg = destPage(url.pathname.slice(3).replace(/\/$/, '')); return pg ? html(pg) : new Response('Not found', { status: 404 }); }
     if (url.pathname === '/share-in') return shareInFallback(req);
+    if (url.pathname === '/admin' || url.pathname === '/admin/') return env.ASSETS ? env.ASSETS.fetch(new Request(url.origin + '/', req)) : new Response('Not found', { status: 404 });
     if (!url.pathname.startsWith('/api/')) return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Not found', { status: 404 });
     if (url.pathname === '/api/health') return json({ ok: true, flights: !!env.TRAVELPAYOUTS_TOKEN, routes: !!env.GOOGLE_KEY, ai: !!env.AI });
     const h = ROUTES[req.method + ' ' + url.pathname];
