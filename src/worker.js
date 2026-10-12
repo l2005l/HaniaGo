@@ -503,6 +503,15 @@ const ROUTES = {
   'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/where': getWhere, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
 };
 export { NOTES };
+/* ---- share to HaniaGo when the service worker is not active: links still open, photos are not kept ---- */
+async function shareInFallback(req) {
+  const to = (p) => new Response(null, { status: 303, headers: { location: p } });
+  if (req.method !== 'POST') return to('/');
+  let fd; try { fd = await req.formData(); } catch { return to('/'); }
+  if (fd.getAll('photos').some((f) => f && typeof f === 'object' && f.size)) return to('/lab/video.html?shared=lost');
+  const q = new URLSearchParams(); for (const k of ['st', 'sx', 'su']) { const v = fd.get(k); if (typeof v === 'string' && v) q.set(k, v.slice(0, 2000)); }
+  return to('/?' + q.toString());
+}
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -511,6 +520,7 @@ export default {
     if (url.pathname === '/sitemap.xml') return html(sitemap(), 'application/xml; charset=utf-8');
     if (url.pathname === '/d' || url.pathname === '/d/') return html(indexPage());
     if (url.pathname.startsWith('/d/')) { const pg = destPage(url.pathname.slice(3).replace(/\/$/, '')); return pg ? html(pg) : new Response('Not found', { status: 404 }); }
+    if (url.pathname === '/share-in') return shareInFallback(req);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS ? env.ASSETS.fetch(req) : new Response('Not found', { status: 404 });
     if (url.pathname === '/api/health') return json({ ok: true, flights: !!env.TRAVELPAYOUTS_TOKEN, routes: !!env.GOOGLE_KEY, ai: !!env.AI });
     const h = ROUTES[req.method + ' ' + url.pathname];

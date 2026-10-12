@@ -282,3 +282,13 @@ test('a photo location becomes a place name, airports are flagged, and lookups a
   assert.deepEqual(mapWhere({ name: 'קולוסיאום', category: 'tourism', address: { city: 'רומא', country: 'איטליה', country_code: 'it' } }), { found: true, name: 'קולוסיאום', city: 'רומא', country: 'איטליה', cc: 'IT', airport: false });
   assert.equal(mapWhere({ error: 'Unable to geocode' }).found, false);
 });
+
+test('sharing a link to HaniaGo without the service worker still opens the app with it', async () => {
+  const env = { DB: fakeD1() };
+  const fd = new FormData(); fd.set('st', 'Shuk'); fd.set('su', 'https://maps.app.goo.gl/abc');
+  const r = await worker.fetch(new Request('https://go.hania360.com/share-in', { method: 'POST', body: fd }), env);
+  assert.equal(r.status, 303); assert.match(r.headers.get('location'), /^\/\?st=Shuk&su=https/);
+  const f2 = new FormData(); f2.append('photos', new File([new Uint8Array([1, 2, 3])], 'a.jpg', { type: 'image/jpeg' }));
+  const r2 = await worker.fetch(new Request('https://go.hania360.com/share-in', { method: 'POST', body: f2 }), env);
+  assert.equal(r2.headers.get('location'), '/lab/video.html?shared=lost');
+});

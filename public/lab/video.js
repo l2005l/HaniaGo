@@ -9,7 +9,7 @@ var TRACKS=[
  ['ים וחופשה',[['rasta','Sunny Rasta','Alexander Nakarada'],['pinacolada','Piña Colada','Alexander Nakarada']]],
  ['אווירה מקומית',[['venice','Night in Venice','Kevin MacLeod · איטליה'],['baguette','Le Baguette','Alexander Nakarada · צרפת']]]];
 var $=function(id){return document.getElementById(id)};
-var photos=[],story=null,track='ukulele',buffers={},actx=null,previewSrc=null,previewId='',busy=false;
+var fromShare=false,photos=[],story=null,track='ukulele',buffers={},actx=null,previewSrc=null,previewId='',busy=false;
 function ev(e){try{fetch('/api/ev',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({e:e}),keepalive:true}).catch(function(){})}catch(x){}}
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 
@@ -46,7 +46,16 @@ async function onFiles(list){
   for(var i=0;i<fs.length;i++){try{photos.push(await loadFile(fs[i]))}catch(err){}if(i%5===4)diag('טוען תמונות… '+(i+1)+'/'+fs.length)}
   if(!photos.length){diag('<span class="err">לא הצלחתי לפתוח את התמונות. נסו לבחור קבצי JPG.</span>');return}
   build(fs.length)}
-$('files').addEventListener('change',function(e){onFiles(e.target.files);e.target.value=''});
+$('files').addEventListener('change',function(e){fromShare=false;onFiles(e.target.files);e.target.value=''});
+(async function shared(){var q=new URLSearchParams(location.search),n=q.get('shared');if(!n)return;
+  try{history.replaceState(null,'',location.pathname)}catch(e){}
+  if(n==='lost'){diag('<span class="err">התמונות ששיתפתם לא נשמרו. פתחו את HaniaGo פעם אחת מהמסך הראשי ונסו לשתף שוב.</span>');return}
+  try{var c=await caches.open('haniago-shared'),ks=await c.keys(),fs=[];
+    for(var i=0;i<ks.length;i++){var r=await c.match(ks[i]);if(!r)continue;var b=await r.blob();
+      fs.push(new File([b],decodeURIComponent(r.headers.get('x-name')||'photo.jpg'),{type:b.type||'image/jpeg',lastModified:+(r.headers.get('x-modified')||0)||Date.now()}))}
+    await caches.delete('haniago-shared');
+    if(fs.length){fromShare=true;onFiles(fs)}else diag('<span class="err">לא הגיעו תמונות מהשיתוף. נסו שוב.</span>')}
+  catch(e){diag('<span class="err">לא הצלחתי לקרוא את התמונות ששיתפתם.</span>')}})();
 function diag(h){$('diag').hidden=false;$('diag').innerHTML=h}
 
 // ---------- demo: a family trip to Rome, including the way there and back ----------
@@ -78,14 +87,16 @@ function dm(k){var p=k.split('-');return (+p[2])+'.'+(+p[1])}
 var whereCache={};
 async function where(la,lo){var k=la.toFixed(3)+','+lo.toFixed(3);if(whereCache[k])return whereCache[k];
   try{var r=await fetch('/api/where?la='+la.toFixed(4)+'&lo='+lo.toFixed(4));var j=r.ok?await r.json():{found:false};whereCache[k]=j;return j}catch(e){return {found:false}}}
+function span(){var t=photos.filter(function(p){return p.time}).map(function(p){return p.time});if(t.length<2)return '';var d=Math.round((Math.max.apply(0,t)-Math.min.apply(0,t))/864e5);
+  return d>14?'<br><b>התמונות מתפרסות על '+d+' ימים.</b> אם זה לא טיול אחד, בחרו רק את התמונות מהטיול.':''}
 async function build(picked,demo){
-  if(busy)return;busy=true;$('make').disabled=true;
+  if(busy)return;busy=true;fromShare=fromShare&&!demo;$('make').disabled=true;
   var timed=photos.filter(function(p){return p.time}).length,geo=photos.filter(function(p){return p.lat!=null}).length;
   photos.sort(function(a,b){return (a.time||8e15)-(b.time||8e15)||a.order-b.order});
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
   diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+
-    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> ייתכן שהטלפון מסיר אותו כשבוחרים מהגלריה. הסרטון ייבנה לפי תאריכים בלבד, בלי שמות מקומות ובלי מפות.':''));
+    (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום</b>, ולכן הסרטון ייבנה לפי תאריכים בלבד.'+(fromShare?' גם בשיתוף מהגלריה המיקום לא הגיע. בדקו בהגדרות השיתוף של הגלריה שהאפשרות "הסרת מיקום" כבויה.':' כשבוחרים תמונות מתוך אתר, הטלפון מוחק את המיקום. כדי לשמור עליו: פתחו את הגלריה, סמנו את התמונות, לחצו שיתוף ובחרו HaniaGo.'):'')+span());
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
   photos.forEach(function(p){var dk=p.time?dayKey(p.time):(cur?cur.day:'');
@@ -109,11 +120,12 @@ async function build(picked,demo){
   var ch=[];
   if(first>0)ch.push({title:'יוצאים לדרך',sub:cl[0].day?dm(cl[0].day):'',cls:cl.slice(0,first)});
   var days=[];cl.slice(first,lastI+1).forEach(function(c){var d=days[days.length-1];if(!d||d.day!==c.day){d={day:c.day,cls:[]};days.push(d)}d.cls.push(c)});
-  days.forEach(function(d,i){ch.push({title:'יום '+(i+1),sub:(d.day?dm(d.day):'')+(dest?' · '+dest:''),cls:d.cls})});
+  var d0=days.length&&days[0].day?new Date(days[0].day+'T12:00:00').getTime():0;
+  days.forEach(function(d,i){var no=d0&&d.day?Math.round((new Date(d.day+'T12:00:00').getTime()-d0)/864e5)+1:i+1;ch.push({title:'יום '+no,sub:(d.day?dm(d.day):'')+(dest?' · '+dest:''),cls:d.cls})});
   if(lastI<cl.length-1)ch.push({title:'חוזרים הביתה',sub:cl[lastI+1].day?dm(cl[lastI+1].day):'',cls:cl.slice(lastI+1)});
   ch.forEach(function(h){h.cls.forEach(function(c){c.photos.forEach(function(p){p.label=c.name||'';p.chapter=h.title})})});
   var dks=cl.map(function(c){return c.day}).filter(Boolean),named={};cl.forEach(function(c){if(c.name)named[c.name]=1});
-  story={dest:dest,chapters:ch,days:days.length,places:Object.keys(named).length,range:dks.length?dm(dks[0])+(dks[0]!==dks[dks.length-1]?'–'+dm(dks[dks.length-1]):'')+'.'+dks[0].slice(0,4):'',geo:geo};
+  story={dest:dest,chapters:ch,days:d0&&days.length&&days[days.length-1].day?Math.round((new Date(days[days.length-1].day+'T12:00:00').getTime()-d0)/864e5)+1:days.length,places:Object.keys(named).length,range:dks.length?dm(dks[0])+(dks[0]!==dks[dks.length-1]?'–'+dm(dks[dks.length-1]):'')+'.'+dks[0].slice(0,4):'',geo:geo};
   showStory();lens();busy=false;$('make').disabled=false}
 function thumbs(){$('thumbs').innerHTML='';photos.forEach(function(p){var c=document.createElement('canvas');c.width=96;c.height=96;var x=c.getContext('2d'),s=Math.max(96/p.img.width,96/p.img.height);
   x.drawImage(p.img,(96-p.img.width*s)/2,(96-p.img.height*s)/2,p.img.width*s,p.img.height*s);$('thumbs').appendChild(c)})}

@@ -28,12 +28,24 @@
     }
   ],
   "share_target": {
-    "action": "/",
-    "method": "GET",
+    "action": "/share-in",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "st",
       "text": "sx",
-      "url": "su"
+      "url": "su",
+      "files": [
+        {
+          "name": "photos",
+          "accept": [
+            "image/*",
+            "image/jpeg",
+            "image/png",
+            "image/heic"
+          ]
+        }
+      ]
     }
   }
 }
