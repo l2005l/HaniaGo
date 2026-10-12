@@ -33,6 +33,13 @@
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.bbar{height:8px;border-radius:99px;background:rgba(255,255,255,.3);overflow:hidden;margin-top:8px}.bbar i{display:block;height:100%;background:#fff;border-radius:99px;transition:width .5s linear}
 .spin{animation:none}}
+details.fold>summary{list-style:none;cursor:pointer;min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold .pm{flex:none;width:32px;height:32px;border-radius:50%;background:var(--sea);position:relative}
+details.fold .pm::before,details.fold .pm::after{content:'';position:absolute;left:9px;right:9px;top:15px;height:2px;background:var(--surface);border-radius:2px}
+details.fold .pm::after{transform:rotate(90deg);transition:transform .2s}
+details.fold[open] .pm::after{transform:rotate(0)}
+details.fold>summary:focus-visible{outline:3px solid var(--sun);outline-offset:2px;border-radius:8px}
 ol.steps2{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
 </style>
 <title>HaniaGo: תכנון טיול, מהבית ועד המלון</title>
@@ -500,7 +507,7 @@ function loadOffers(){var d=D();if(d.abroad||ODEST===d.n)return;ODEST=d.n;OFFERS
 var TOFF=null,TCAR=['AVIS','Sixt','Hertz','Budget','השכרת רכב'],TALL=['ביטוח נסיעות','עסקאות במט״ח','VIP בנתב״ג','ממסי'];
 function loadTravelOffers(){if(TOFF)return;TOFF={};api('GET','/api/offers?names='+encodeURIComponent(TCAR.concat(TALL).join('|'))).then(function(j){TOFF=j.offers||{};soft()}).catch(function(){})}
 function travelOffersHtml(){loadTravelOffers();var names=(S.car?TCAR:[]).concat(TALL),rows=[],seen={};names.forEach(function(n){(TOFF[n]||[]).forEach(function(o){var k=n+o.label+o.card;if(seen[k])return;seen[k]=1;rows.push('<p class="aff"><b>'+esc(n)+':</b> '+esc(o.label)+(o.card?' · למחזיקי '+esc(o.card):'')+(o.pending?' · ממתינה לאימות':'')+' <a target="_blank" rel="noopener" href="'+esc(o.url)+'">לפרטים</a></p>')})});
- return rows.length?'<details class="stop"><summary style="cursor:pointer;min-height:40px;display:flex;align-items:center"><b>'+rows.length+' הטבות מהנחה בכיס לנסיעה הזאת</b>&nbsp;<span class="note">· לפתיחה</span></summary>'+rows.join('')+'<p class="note">הטבות לפי כרטיס אשראי או מועדון. בדקו בהנחה בכיס אם הן חלות עליכם, ואם אפשר לשלב אותן עם הזמנה דרך הכפתורים למעלה.</p></details>':''}
+ return rows.length?'<details class="stop fold"><summary><b>'+rows.length+' הטבות מהנחה בכיס לנסיעה הזאת</b><i class="pm" aria-hidden="true"></i></summary>'+rows.join('')+'<p class="note">הטבות לפי כרטיס אשראי או מועדון. בדקו בהנחה בכיס אם הן חלות עליכם, ואם אפשר לשלב אותן עם הזמנה דרך הכפתורים למעלה.</p></details>':''}
 function offersHtml(s){var l=!D().abroad&&OFFERS[s.n];if(!l)return '';return l.map(function(o){return '<p class="aff"><b>הטבה מהנחה בכיס:</b> '+esc(o.label)+(o.card?' · לחברי '+esc(o.card):'')+(o.pending?' · ממתינה לאימות':'')+' <a target="_blank" rel="noopener" href="'+esc(o.url)+'">לפרטים</a></p>'}).join('')}
 async function sendReport(place,raw,kind,srcKind,name){
  try{await api('POST','/api/reports',{dest:D().n,place:place,text:raw,kind:kind,src:srcKind,srcName:name||'',rating:S.fbRate})}
@@ -795,7 +802,7 @@ document.addEventListener('input',function(e){var k=e.target.dataset&&e.target.d
  if(e.target.dataset&&e.target.dataset.sug&&!S.abroad){var ql=e.target.value.trim();PLACES=ql.length<2?[]:ILP.filter(function(n){return n.indexOf(ql)>=0}).map(function(n){return{name:n,il:true}});drawSug()}
  if(e.target.dataset&&e.target.dataset.sug&&S.abroad){clearTimeout(plT);var q=e.target.value.trim();plT=setTimeout(function(){if(q.length<2){PLACES=[];drawSug();return}api('GET','/api/places?q='+encodeURIComponent(q)).then(function(j){PLACES=j.places||[];drawSug()}).catch(function(){})},300)}});
 document.addEventListener('click',function(e){var a=e.target.closest('a[data-partner]');
- if(a)api('POST','/api/click',{partner:a.dataset.partner,dest:D().n}).catch(function(){});
+ if(a){api('POST','/api/click',{partner:a.dataset.partner,dest:D().n}).catch(function(){});try{localStorage.setItem('haniago_ret',JSON.stringify({tab:S.tab,pday:S.pday,y:Math.round(window.scrollY),ts:Date.now()}))}catch(x){}}
  var b=e.target.closest('button[data-act]');if(!b)return;var act=b.dataset.act;
  if(act==='fbopen'){S.fbOpen=b.dataset.place;S.fbMsg='';render(1)}
  else if(act==='fbclose'){S.fbOpen='';S.fbMsg='';render(1)}
@@ -853,6 +860,7 @@ async function pullTrip(){try{var j=await api('GET','/api/trip');if(j&&j.state&&
 function todayIdx(){var a=new Date(S.date+'T00:00'),n=new Date();n.setHours(0,0,0,0);var i=Math.round((n-a)/864e5);return isNaN(i)||i<0||i>nights()?-1:i}
 (async function(){var vm=(location.hash||'').match(/^#view=([a-z0-9]{10})$/);if(vm){try{history.replaceState(null,'',location.pathname)}catch(e){}await pullTrip();return openView(vm[1])}
  if(await pullTrip()||TRIP)S.started=true;applyQDest();var ti=todayIdx();if(ti>=0&&!HASHTAB){S.tab='plan';S.pday=ti}else if(!HASHTAB&&(S.fDep||S.pdone)&&daysTo()>=0&&S.tab==='family'){S.tab='plan';S.pday=-1}
+ var rt=null;try{rt=JSON.parse(localStorage.getItem('haniago_ret')||'null');localStorage.removeItem('haniago_ret')}catch(x){}if(rt&&Date.now()-rt.ts<2*3600e3&&!HASHTAB){S.tab=rt.tab;S.pday=rt.pday;render(1);setTimeout(function(){window.scrollTo(0,rt.y||0)},60)}
  if(ADMIN)loadAdmin();render(1)})();
 document.addEventListener('visibilitychange',function(){if(document.visibilityState!=='visible'||!TRIP)return;var a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))return;pullTrip().then(function(ch){if(ch)render(1)})});
 (function(){var b=document.getElementById('inst'),help=document.getElementById('instHelp'),ev=null;if(!b)return;
@@ -954,7 +962,7 @@ ev('open');readShare();
 /* unique visitors: the device remembers its own last visit, the server only gets a count */
 (function(){var t=new Date(),day=t.getFullYear()+'-'+(t.getMonth()+1)+'-'+t.getDate(),mon=t.getFullYear()+'-'+(t.getMonth()+1),last='';try{last=localStorage.getItem('haniago_uv')||''}catch(e){return}
  if(!last)ev('uv_new');if(last!==day){ev('uv_day');if(last.split('-').slice(0,2).join('-')!==mon)ev('uv_month');try{localStorage.setItem('haniago_uv',day)}catch(e){}}})();
-if(location.hash==='#ins=done'){S.pack=S.pack||{};S.pack['ביטוח נסיעות']=true;S.started=true;S.tab='leave';try{history.replaceState(null,'',location.pathname)}catch(e){}}
+if(location.hash==='#ins=done'){S.pack=S.pack||{};S.pack['ביטוח נסיעות']=true;S.started=true;if(!localStorage.getItem('haniago_ret'))S.tab='leave';try{history.replaceState(null,'',location.pathname)}catch(e){}}
 var h=(location.hash||'').slice(1);if(TABS.some(function(x){return x[0]===h})){S.tab=h;HASHTAB=1}
 render();
 </script>
