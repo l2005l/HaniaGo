@@ -26,6 +26,11 @@
 .dl button{min-height:40px;padding:0 12px}
 .dl .lt{flex-basis:100%;font-weight:700;color:var(--muted);font-size:13px;margin-top:6px}
 .dl .nb{opacity:.75}
+.buildbar{position:fixed;inset-inline:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:55;background:var(--sea);color:var(--surface);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:520px;margin:0 auto}
+.buildbar b{display:block;font-size:17px}.buildbar span{font-size:14px;opacity:.9}
+.spin{width:26px;height:26px;flex:none;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
 ol.steps2{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
 </style>
 <title>HaniaGo: תכנון טיול, מהבית ועד המלון</title>
@@ -750,7 +755,7 @@ function render(keep){if(VIEW){document.body.classList.remove('welcome');documen
  document.body.classList.remove('viewing');D();var wel=!S.started;document.body.classList.toggle('welcome',wel);ev(wel?'welcome':'tab_'+S.tab);
  if(wel){document.getElementById('pass').innerHTML='';document.getElementById('main').innerHTML=vWelcome();document.getElementById('nav').innerHTML='';if(!keep)window.scrollTo(0,0);return}
  loadTips();loadOffers();var t=TABS.filter(function(x){return x[0]===S.tab})[0]||TABS[0],gi=0;NAV.forEach(function(g,i){if(g[1].indexOf(t[0])>=0)gi=i});if(gi===0)S.lastP=t[0];
- document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=newsCard()+tripCard()+(gi===0?stepBar(t[0]):gi===3?moreBar(t[0]):'')+t[2]()+verLine()+calHtml()+sheetHtml();
+ document.getElementById('pass').innerHTML=vPass();document.getElementById('main').innerHTML=newsCard()+tripCard()+(gi===0?stepBar(t[0]):gi===3?moreBar(t[0]):'')+t[2]()+verLine()+calHtml()+sheetHtml()+(S.busy&&S.tab==='family'?'<div class="buildbar" role="status" aria-live="polite"><i class="spin" aria-hidden="true"></i><div>'+(S.building?'<b>בונים את '+esc(S.building)+'</b><span>אטרקציות, מלון ומסלול לכל יום. זה לוקח עד חצי דקה, אפשר להישאר במסך.</span>':'<b>מחפשים את היעד</b><span>רגע אחד…</span>')+'</div></div>':'');
  var nv=document.getElementById('nav');nv.className='nav4';nv.innerHTML=NAV.map(function(g,i){var to=i===0?(S.lastP||'family'):g[1][0];return '<button data-go="'+to+'" class="'+(i===gi?'on':'')+'"'+(i===gi?' aria-current="page"':'')+'><svg aria-hidden="true" viewBox="0 0 24 24">'+g[2]+'</svg>'+g[0]+'</button>'}).join('');
  save();pushSync();if(!keep)window.scrollTo(0,0)}
 document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var d=b.dataset;
@@ -860,7 +865,7 @@ function loadDl(){if(DL&&DL.at>Date.now()-6*3600e3)return;var at=Date.now();DL=D
 function dlItems(){var L=DL&&DL.list&&DL.list.length?DL.list:POP.map(function(p){return {n:p[0],code:p[1],il:0,ready:false}}).concat(ILP.map(function(n){return {n:n,il:1,ready:false}}));return L.filter(function(x){return !!x.il===!S.abroad})}
 function dlHtml(q){q=String(q||'').trim();var L=dlItems().map(function(x,i){return {x:x,i:i}}).filter(function(o){return !q||o.x.n.indexOf(q)>=0});L.sort(function(a,b){return a.x.n.localeCompare(b.x.n,'he')});
  if(!L.length)return '<p class="note">אין ברשימה יעד בשם הזה. אפשר לבנות אותו בכפתור "בניית יעד לפי השם".</p>';var h='',lt='';
- L.forEach(function(o){var f=o.x.n.charAt(0);if(!q&&f!==lt){lt=f;h+='<span class="lt">'+esc(f)+'</span>'}var on=o.x.key?S.dest===o.x.key:DEST[S.dest]&&DEST[S.dest].n===o.x.n;h+='<button data-act="dlpick" data-i="'+o.i+'" class="'+(on?'on':o.x.ready?'':'nb')+'">'+esc(o.x.n)+(o.x.ready||o.x.key?'':' ⏳')+'</button>'});return h}
+ L.forEach(function(o){var f=o.x.n.charAt(0);if(!q&&f!==lt){lt=f;h+='<span class="lt">'+esc(f)+'</span>'}var on=o.x.key?S.dest===o.x.key:DEST[S.dest]&&DEST[S.dest].n===o.x.n;var bl=S.busy&&S.building===o.x.n;h+='<button data-act="dlpick" data-i="'+o.i+'" class="'+(on||bl?'on':o.x.ready?'':'nb')+'"'+(S.busy?' disabled':'')+'>'+esc(o.x.n)+(bl?' · בונים…':o.x.ready||o.x.key?'':' ⏳')+'</button>'});return h}
 function dlPick(i){var x=dlItems()[i];if(!x)return;if(x.key&&DEST[x.key]){S.dest=x.key;S.abroad=!!DEST[x.key].abroad;S.sel={};S.newDest='';S.err2='';PLACES=[];return render(1)}
  var have=Object.keys(DEST).filter(function(k){return DEST[k].n===x.n&&!!DEST[k].abroad===!x.il})[0];if(have&&!thin(have)){S.dest=have;S.sel={};S.newDest='';render(1);return}
  mkDest(x.il?{name:x.n,il:true}:{name:x.n,code:x.code,abroad:true})}
