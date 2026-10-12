@@ -15,7 +15,7 @@ function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp
 
 // ---------- reading photos: date and location from EXIF ----------
 function exif(buf){
-  var out={time:0,lat:null,lng:null};
+  var out={time:0,lat:null,lng:null,gps:0};
   try{var v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return out;var o=2;
     while(o<v.byteLength-4){var m=v.getUint16(o);
       if(m===0xFFE1&&v.getUint32(o+4)===0x45786966){var s=o+10,le=v.getUint16(s)===0x4949;
@@ -28,7 +28,7 @@ function exif(buf){
         if(!dt){var e3=find(ifd0,0x0132);if(e3)dt=str(s+g32(e3+8),19)}
         var mm=/^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d)/.exec(dt);if(mm)out.time=new Date(+mm[1],mm[2]-1,+mm[3],+mm[4],+mm[5]).getTime();
         var gp=find(ifd0,0x8825);
-        if(gp){var gi=g32(gp+8),la=find(gi,2),lo=find(gi,4),lr=find(gi,1),lor=find(gi,3);
+        if(gp){out.gps=1;var gi=g32(gp+8),la=find(gi,2),lo=find(gi,4),lr=find(gi,1),lor=find(gi,3);
           if(la&&lo){var dm=function(e){var p=s+g32(e+8);return rat(p)+rat(p+8)/60+rat(p+16)/3600};
             var a=dm(la),b=dm(lo);if(lr&&String.fromCharCode(v.getUint8(lr+8))==='S')a=-a;if(lor&&String.fromCharCode(v.getUint8(lor+8))==='W')b=-b;
             if((a||b)&&Math.abs(a)<=90&&Math.abs(b)<=180){out.lat=a;out.lng=b}}}
@@ -39,7 +39,7 @@ function shrink(src,w,h){var k=Math.min(1,1280/Math.max(w,h)),c=document.createE
 async function loadFile(f){
   var meta=exif(await f.slice(0,262144).arrayBuffer());
   var bmp=await createImageBitmap(f);var c=shrink(bmp,bmp.width,bmp.height);if(bmp.close)bmp.close();
-  return {img:c,time:meta.time,lat:meta.lat,lng:meta.lng,order:f.lastModified||0}}
+  return {img:c,time:meta.time,lat:meta.lat,lng:meta.lng,gps:meta.gps,order:f.lastModified||0}}
 async function onFiles(list){
   var fs=[].slice.call(list||[]).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|heic|heif)$/i.test(f.name)});if(!fs.length)return;
   diag('טוען '+fs.length+' תמונות…');photos=[];$('thumbs').innerHTML='';$('storysec').hidden=true;$('make').disabled=true;
@@ -95,7 +95,7 @@ async function build(picked,demo){
   photos.sort(function(a,b){return (a.time||8e15)-(b.time||8e15)||a.order-b.order});
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
-  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+
+  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+(geo<photos.length&&!demo?' · יש שדה מיקום ריק: '+photos.filter(function(p){return p.gps&&p.lat==null}).length+' · אין שדה מיקום בכלל: '+photos.filter(function(p){return !p.gps}).length:'')+
     (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום</b>, ולכן הסרטון ייבנה לפי תאריכים בלבד.'+(fromShare?' גם בשיתוף מהגלריה המיקום לא הגיע. בדקו בהגדרות השיתוף של הגלריה שהאפשרות "הסרת מיקום" כבויה.':' כשבוחרים תמונות מתוך אתר, הטלפון מוחק את המיקום. כדי לשמור עליו: פתחו את הגלריה, סמנו את התמונות, לחצו שיתוף ובחרו HaniaGo.'):'')+span());
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
