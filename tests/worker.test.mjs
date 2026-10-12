@@ -378,4 +378,20 @@ test('a misspelled destination is resolved to real places only, with Israel told
   assert.equal(mapNomCity([{ lat: '40.1', lon: '44.5', addresstype: 'city', name: 'Երևան', namedetails: { 'name:he': 'ירוואן', 'name:en': 'Yerevan' }, address: { country: 'ארמניה', country_code: 'am' } }])[0].n, 'ירוואן');
   const d = cleanDest({ n: 'ירוואן', at: [[40.18, 44.51], [40.2, 44.5], [40.1, 44.6], [29.55, 34.95]].map((c, i) => ({ n: 'מקום ' + i, la: c[0], lo: c[1] })) }, { ab: true, la: 40.18, lo: 44.51 });
   assert.equal(d.at.length, 3, 'a place 1,000 km away is dropped'); assert.equal(d.abroad, 1);
+  const far = cleanDest({ n: 'אתיופיה', at: [[9.0, 38.7], [12.0, 39.0], [12.6, 37.5], [7.0, 38.5]].map((c, i) => ({ n: 'מקום ' + i, la: c[0], lo: c[1] })) }, { ab: true, la: 9.0, lo: 38.7 });
+  assert.equal(far.at.length, 4, 'a wide region keeps places within 700 km when too few are close');
+});
+
+test('a country typed as a destination becomes a choice of its cities', async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = async (u) => { u = String(u);
+    if (u.includes('travelpayouts')) { const sp = new URL(u).searchParams, t = sp.get('term').toLowerCase();
+      if (t === 'ethiopia') return new Response(JSON.stringify([{ name: sp.get('locale') === 'he' ? 'אדיס אבבה' : 'Addis Ababa', code: 'ADD', country_name: 'אתיופיה', coordinates: { lat: 9.0, lon: 38.75 } }]));
+      return new Response('[]'); }
+    if (u.includes('nominatim')) return new Response(JSON.stringify([{ lat: '10.2', lon: '38.6', addresstype: 'country', type: 'administrative', class: 'boundary', name: 'ኢትዮጵያ', namedetails: { 'name:he': 'אתיופיה', 'name:en': 'Ethiopia' }, address: { country: 'אתיופיה', country_code: 'et' } }]));
+    return new Response('[]'); };
+  try {
+    const r = await (await call({ DB: fakeD1() }, 'GET', '/api/resolve?q=' + encodeURIComponent('אתיופיה'))).json();
+    assert.equal(r.cands.length, 1); assert.equal(r.cands[0].n, 'אדיס אבבה'); assert.equal(r.cands[0].code, 'ADD');
+  } finally { globalThis.fetch = real; }
 });
