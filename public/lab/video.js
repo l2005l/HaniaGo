@@ -91,11 +91,14 @@ function span(){var t=photos.filter(function(p){return p.time}).map(function(p){
   return d>14?'<br><b>התמונות מתפרסות על '+d+' ימים.</b> אם זה לא טיול אחד, בחרו רק את התמונות מהטיול.':''}
 async function build(picked,demo){
   if(busy)return;busy=true;fromShare=fromShare&&!demo;$('make').disabled=true;
+  // Photos without GPS: borrow the place from HaniaGo's live trip log (taken on this phone, while the app was open)
+  var TRK=[],trk=0;try{TRK=JSON.parse(localStorage.getItem('haniago_track')||'[]').map(function(t){var m=/^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)$/.exec(t.w||'');return m?{t:new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5]).getTime(),la:+t.la,lo:+t.lo}:null}).filter(Boolean)}catch(e){}
+  if(TRK.length)photos.forEach(function(p){if(p.lat!=null||!p.time)return;var b=null,bd=45*60e3;TRK.forEach(function(t){var d=Math.abs(t.t-p.time);if(d<=bd){bd=d;b=t}});if(b){p.lat=b.la;p.lng=b.lo;p.trk=1;trk++}});
   var timed=photos.filter(function(p){return p.time}).length,geo=photos.filter(function(p){return p.lat!=null}).length;
   photos.sort(function(a,b){return (a.time||8e15)-(b.time||8e15)||a.order-b.order});
   var cut=0;if(photos.length>MAX){cut=photos.length-MAX;var keep=[];for(var i=0;i<MAX;i++)keep.push(photos[Math.floor(i*photos.length/MAX)]);photos=keep}
   thumbs();
-  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+
+  diag((demo?'דוגמה: ':'')+photos.length+' תמונות'+(cut?' (מתוך '+picked+'. נבחרו 80 בפיזור שווה לאורך הטיול)':'')+'<br>תאריך צילום: '+timed+' · מיקום: '+geo+(trk?' ('+trk+' מהמסלול החי ב-HaniaGo)':'')+
     (geo<photos.length/2&&!demo?'<br><b>לרוב התמונות אין מיקום.</b> הסרטון ייבנה לפי תאריכי הצילום, ואם שמרתם מסלול ב-HaniaGo, גם לפי המקומות שבו. בטיול הבא כדאי להפעיל שמירת מיקום בהגדרות המצלמה.'+(fromShare?(photos.some(function(p){return p.gps})?' הגלריה הסירה את המיקום: בדקו בהגדרות השיתוף שלה שהאפשרות "הסרת מיקום" כבויה.':' המצלמה לא שמרה מיקום בתמונות האלה.'):' ייתכן שהמצלמה לא שמרה מיקום, או שהטלפון הסיר אותו כי התמונות נבחרו מתוך אתר. שיתוף מהגלריה ל-HaniaGo שומר על המיקום.'):'')+span());
   // 1. places: consecutive photos taken within 400 m on the same day
   var cl=[],cur=null;
