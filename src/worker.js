@@ -5,7 +5,10 @@ import { destPage, indexPage, sitemap } from './pages.js';
 // endpoint answers {available:false} and the app falls back to its own estimate.
 const TOPICS = ['תורים', 'עגלה', 'חום', 'מחיר', 'בטיחות', 'גיל', 'אוכל', 'כללי'];
 const DAY = 864e5;
-const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+// Gemma 4 26B (MoE, ~4B active) uses ~7x fewer Workers AI neurons per trip than Llama 3.3 70B.
+// Gemma has no JSON mode, so its JSON is read from the text; if that fails, Llama answers in JSON mode.
+const AI_MODEL = '@cf/google/gemma-4-26b-a4b-it';
+const AI_FALLBACK_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra } });
@@ -48,9 +51,14 @@ async function askJson(env, system, input) {
   if (!env.AI) return null;
   const used = await bump(env, 'ai:' + today());
   if (used > +(env.AI_DAILY_CAP || 300)) return null;
+  const messages = [{ role: 'system', content: system + '\nReply with one JSON object only.' }, { role: 'user', content: input }];
+  const text = (out) => out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content));
   try {
-    const out = await env.AI.run(AI_MODEL, { messages: [{ role: 'system', content: system }, { role: 'user', content: input }], response_format: { type: 'json_object' }, max_tokens: 5000 });
-    return looseJson(out && out.response);
+    const j = looseJson(text(await env.AI.run(AI_MODEL, { messages, max_tokens: 5000 })));
+    if (j) return j;
+  } catch {}
+  try {
+    return looseJson(text(await env.AI.run(AI_FALLBACK_MODEL, { messages: [{ role: 'system', content: system }, { role: 'user', content: input }], response_format: { type: 'json_object' }, max_tokens: 5000 })));
   } catch { return null; }
 }
 
