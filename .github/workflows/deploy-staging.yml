@@ -4,7 +4,7 @@ name: Deploy HaniaGo staging
 on:
   workflow_dispatch:
   push:
-    branches: [feature/hania-today, feature/price-alerts]
+    branches: [feature/hania-today, feature/price-alerts, feature/alerts-for-points]
 
 concurrency:
   group: haniago-staging
@@ -53,14 +53,13 @@ jobs:
           grep -q '"dest":"רומא"' /tmp/s.json
           curl -fsS -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" -H "$C" "$GO_URL/api/account/unlink" -d '{}' | grep -q '"linked":false'
           echo "HaniaGo staging: the trip saves to the account and Hania Today can read it."
-          # Price alerts: the first is free; a second costs 50 Hania points, which a new account does not have yet.
-          D1=$(date -u -d '+40 days' +%F); D2=$(date -u -d '+45 days' +%F)
-          curl -fsS -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" "$GO_URL/api/alerts" -d "{\"code\":\"FCO\",\"name\":\"רומא\",\"date\":\"$D1\",\"target\":900}" | tee /tmp/a1.json; echo
-          grep -q '"paid":0' /tmp/a1.json
-          code=$(curl -sS -o /tmp/a2.json -w '%{http_code}' -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" -H "$C" "$GO_URL/api/alerts" -d "{\"code\":\"FCO\",\"name\":\"רומא\",\"date\":\"$D2\",\"target\":900}")
+          # Price alerts are bought with 50 Hania points: none without an account, none for an account with fewer than 50.
+          D1=$(date -u -d '+40 days' +%F)
+          A="{\"code\":\"FCO\",\"name\":\"רומא\",\"date\":\"$D1\",\"target\":900}"
+          code=$(curl -sS -o /tmp/a1.json -w '%{http_code}' -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" "$GO_URL/api/alerts" -d "$A")
+          cat /tmp/a1.json; echo; test "$code" = 402; grep -q '"need_account"' /tmp/a1.json
+          code=$(curl -sS -o /tmp/a2.json -w '%{http_code}' -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" -H "$C" "$GO_URL/api/alerts" -d "$A")
           cat /tmp/a2.json; echo; test "$code" = 402; grep -q '"not_enough"' /tmp/a2.json
-          curl -fsS -H "x-device: $DEV" -H "$C" "$GO_URL/api/alerts" > /dev/null
-          curl -fsS -H "Origin: $PASS_URL" -H "$C" "$GO_URL/api/account/summary" | grep -q '"alerts":\[{"name":"רומא"'
-          ID=$(node -pe 'JSON.parse(require("fs").readFileSync("/tmp/a1.json","utf8")).alert.id')
-          curl -fsS -X POST -H 'content-type: application/json' -H "Origin: $GO_URL" -H "x-device: $DEV" "$GO_URL/api/alerts/delete" -d "{\"id\":\"$ID\"}" > /dev/null
-          echo "HaniaGo staging: price alerts save, the second asks Hania Pass for points, and Hania Today can read them."
+          curl -fsS -H "x-device: $DEV" -H "$C" "$GO_URL/api/alerts" | tee /tmp/a3.json; echo
+          node -e 'const j=JSON.parse(require("fs").readFileSync("/tmp/a3.json","utf8")); process.exit(Number.isFinite(j.balance)&&j.balance<50?0:1)'
+          echo "HaniaGo staging: a price alert needs an account and 50 Hania points, and HaniaGo knows the balance."
