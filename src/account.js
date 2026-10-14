@@ -5,6 +5,7 @@
 
 import { tripKey } from './worker.js';
 import { BUILTIN } from './builtin.js';
+import { alertsForUser } from './alerts.js';
 
 const MAX_TRIPS = 10, DAY = 864e5;
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -86,7 +87,7 @@ export async function accountSummary(req, env) {
     if (t) out.push(t);
   }
   out.sort((a, b) => a.daysTo - b.daysTo);
-  return reply({ available: true, signedIn: true, trips: out.slice(0, 3) });
+  return reply({ available: true, signedIn: true, trips: out.slice(0, 3), alerts: await alertsForUser(env, user.id).catch(() => []) });
 }
 
 export function summaryPreflight(req) {

@@ -1,6 +1,7 @@
 import { getAccount, linkAccount, unlinkAccount, accountSummary, summaryPreflight } from './account.js';
 import { DESTLIST, destKey } from './destlist.js';
 import { okEndpoint, vapid, wake, subId, ilNow, dueMessage, cleanTrip, placeOn } from './push.js';
+import { listAlerts, createAlert, deleteAlert, syncEndpoint, runAlerts, takeAlertMessage } from './alerts.js';
 import { destPage, indexPage, sitemap } from './pages.js';
 // HaniaGo API. Every external data source is optional: without its key the
 // endpoint answers {available:false} and the app falls back to its own estimate.
@@ -163,7 +164,7 @@ async function postClick(req, env) {
 }
 
 /* ---- anonymous usage counters: one number per event per day, no device and no trip details ---- */
-const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'ics', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_page', 'src_video', 'src_other', 'video_make', 'video_share', 'push_on', 'cam_guide', 'offline_ok', 'tix_open', 'late', 'live_on'];
+const EVENTS = ['open', 'welcome', 'start', 'tab_family', 'tab_flight', 'tab_leave', 'tab_plan', 'tab_money', 'tab_share', 'tab_community', 'flight_pick', 'day_ok', 'plan_mine', 'my_hotel', 'share_in', 'together', 'from_save', 'new_trip', 'uv_day', 'uv_month', 'uv_new', 'ics', 'view_make', 'view_open', 'view_adopt', 'ready_trip', 'src_whatsapp', 'src_facebook', 'src_instagram', 'src_telegram', 'src_hania360', 'src_save', 'src_page', 'src_video', 'src_other', 'video_make', 'video_share', 'push_on', 'cam_guide', 'offline_ok', 'tix_open', 'late', 'live_on', 'price_alert'];
 async function postEvent(req, env) {
   const b = await req.json().catch(() => null), e = str(b && b.e, 30);
   if (!EVENTS.includes(e)) return bad('event');
@@ -520,6 +521,7 @@ const ROUTES = {
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'POST /api/share': postShare, 'GET /api/share': getShare, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
   'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/destlist': getDestList, 'GET /api/resolve': getResolve, 'GET /api/push/key': pushKey, 'POST /api/push/sub': pushSub, 'POST /api/push/unsub': pushUnsub, 'POST /api/push/msg': pushMsg, 'POST /api/push/test': pushTest, 'GET /api/where': getWhere, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
+  'GET /api/alerts': listAlerts, 'POST /api/alerts': (req, env) => createAlert(req, env), 'POST /api/alerts/delete': deleteAlert, 'POST /api/alerts/endpoint': syncEndpoint,
 };
 export { NOTES };
 /* ---- what destination did the user mean: only real places, never an invented one ---- */
@@ -632,6 +634,7 @@ async function pushUnsub(req, env) {
 }
 async function pushMsg(req, env) {
   const b = await req.json().catch(() => null), ep = b && b.endpoint; if (!okEndpoint(ep)) return bad('sub');
+  const al = await takeAlertMessage(env, ep); if (al) return json(al);
   const r = await env.DB.prepare('SELECT msg FROM push_subs WHERE id=?').bind(await subId(ep)).first();
   const m = r && r.msg ? JSON.parse(r.msg) : null;
   return json(m ? { title: m.title, body: m.body, url: m.url } : { title: 'HaniaGo', body: 'יש עדכון לטיול שלכם.', url: '/' });
@@ -683,7 +686,7 @@ async function shareInFallback(req) {
 }
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(Promise.allSettled([runReminders(env), prebuild(env)]));
+    ctx.waitUntil(Promise.allSettled([runReminders(env), prebuild(env), runAlerts(env)]));
   },
   async fetch(req, env) {
     const url = new URL(req.url);
