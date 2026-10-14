@@ -2,13 +2,13 @@
 // HaniaGo checks the cached Travelpayouts prices a few times a day and sends a push
 // (and, with a Hania360 account, a line in Hania Today) when the price drops to it.
 //
-// The first alert is free. More alerts (up to MAX) need a Hania360 account and cost
-// Hania points, which Hania Pass deducts (Service Binding env.PASS) with the person's own cookie.
+// Every alert (up to MAX) is bought with Hania points: it needs a Hania360 account and enough
+// points, which Hania Pass deducts (Service Binding env.PASS) with the person's own cookie.
 
 import { passUser } from './account.js';
 import { okEndpoint, wake, subId } from './push.js';
 
-export const FREE = 1, MAX = 5, COST = 50, CHECK_EVERY = 6 * 3600e3, PER_RUN = 40;
+export const FREE = 0, MAX = 5, COST = 50, CHECK_EVERY = 6 * 3600e3, PER_RUN = 40;
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const bad = (error, status = 400) => json({ error }, status);
 const str = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -59,8 +59,19 @@ export async function listAlerts(req, env) {
   // Alerts made on this phone before signing in now belong to the account too (Hania Today shows them).
   if (user) await env.DB.prepare("UPDATE price_alerts SET user_id=? WHERE device=? AND user_id=''").bind(user.id, device).run();
   const rows = await mine(env, device, user && user.id);
-  return json({ alerts: rows.map(view), free: FREE, max: MAX, cost: COST, signedIn: !!user, account: user !== undefined });
+  return json({ alerts: rows.map(view), free: FREE, max: MAX, cost: COST, signedIn: !!user, account: user !== undefined, balance: user ? await balanceOf(req, env) : null, earnUrl: passTodayUrl(req) });
 }
+
+/** The person's Hania points, asked of Hania Pass. Null when it cannot answer. */
+async function balanceOf(req, env) {
+  try {
+    const r = await env.PASS.fetch('https://pass.internal/api/points', { headers: { cookie: req.headers.get('cookie') || '' } });
+    const j = r.ok ? await r.json() : null;
+    return j && Number.isFinite(j.balance) ? j.balance : null;
+  } catch { return null; }
+}
+/** Where points are earned and seen: Hania Today. */
+const passTodayUrl = (req) => (/\.lior-hania\.workers\.dev$/.test(new URL(req.url).hostname) ? 'https://hania-pass-staging.lior-hania.workers.dev/today' : 'https://today.hania360.com/');
 
 /** Spends Hania points through Hania Pass, once per key. */
 async function spend(req, env, key, label) {
@@ -88,7 +99,7 @@ export async function createAlert(req, env, fetchImpl = fetch) {
   const id = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
   let paid = 0, balance;
   if (rows.length >= FREE) {
-    if (!user) return json({ error: user === undefined ? 'too_many' : 'need_account', cost: COST }, 402);
+    if (!user) return json({ error: user === undefined ? 'unavailable' : 'need_account', cost: COST }, 402);
     const s = await spend(req, env, 'spend:go_alert:' + id, `התראת מחיר: ${a.name}`);
     if (!s.ok) return json({ error: s.error === 'not_enough' ? 'not_enough' : 'points', cost: COST, balance: s.balance }, 402);
     paid = COST; balance = s.balance;

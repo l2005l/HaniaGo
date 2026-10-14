@@ -80,6 +80,7 @@ p{margin:0}
 .logo span{color:var(--sea)}
 .top{align-items:center}.top button{white-space:nowrap;font-size:14px;padding:6px 12px}
 .note{font-size:13px;color:var(--muted)}
+.meter{height:10px;border-radius:99px;background:var(--line);overflow:hidden}.meter i{display:block;height:100%;background:var(--sea)}
 .demo{background:var(--sun);color:var(--on-sun);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600}
 .pass{background:var(--sea);color:var(--on-sea);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .pass .route{display:flex;justify-content:space-between;align-items:center;gap:8px;font-family:var(--display);font-size:28px;direction:ltr}
@@ -598,12 +599,13 @@ function alertCard(d){if(!d.code||VIEW)return '';alLoad();accLoad();var I=AL.inf
  var mine=AL.list.filter(function(a){return a.code===d.code&&(a.date===S.date||(a.flex&&a.date.slice(0,7)===S.date.slice(0,7)))&&a.ret===ret});
  var h='<div class="card" id="c-alert"><h3>התראת מחיר</h3><p class="note">בוחרים מחיר לנוסע, ו-HaniaGo בודקת כמה פעמים ביום. כשהטיסה יורדת אליו, מגיעה התראה לטלפון'+(ACC.signedIn?' ושורה ב-Hania Today':'')+'.</p>';
  AL.list.forEach(function(a){h+='<div class="stop"><div class="sp"><b>'+esc(a.name)+'</b><span class="tag">'+(a.hit?'הגיע למחיר!':'עוקבים')+'</span></div><p class="note">'+esc(alWhen(a))+' · יעד '+nis(a.target)+(a.best?' · הכי זול כעת '+nis(a.best):'')+(a.checked?' · נבדק ב-'+clock(a.checked):'')+'</p><div class="row sm">'+(a.hit&&a.link?'<a class="btn pri grow" data-partner="avia" target="_blank" rel="noopener" href="'+esc(a.link)+'">להזמנה ב-Aviasales</a>':'')+'<button data-act="aldel" data-id="'+esc(a.id)+'">מחיקת ההתראה</button></div></div>'});
- if(!mine.length&&AL.list.length<I.max){var sug=cheap?Math.max(50,Math.round(cheap*0.9/10)*10):'';var tv=S.alTarget||sug;
-  h+='<label for="altg">התראה כשהמחיר לנוסע יורד אל (₪)<input id="altg" type="number" min="50" inputmode="numeric" data-f="alTarget" value="'+esc(tv)+'"></label>'+(cheap?'<p class="note">הזול ביותר שמצאנו כעת: '+nis(cheap)+'.</p>':'')
-   +'<label class="chk" for="alfx"><input id="alfx" type="checkbox" data-f="alFlex"'+(S.alFlex?' checked':'')+'>תאריכים גמישים: כל '+MONTHS[+S.date.slice(5,7)-1]+', אותו מספר לילות</label>';
-  var paid=AL.list.length>=I.free;
-  h+='<button class="pri" data-act="alsave"'+(AL.busy?' disabled':'')+'>'+(paid?'שמירת התראה · '+I.cost+' נקודות Hania':'שמירת התראה, בחינם')+'</button>';
-  if(paid)h+='<p class="note">ההתראה הראשונה בחינם. כל התראה נוספת עולה '+I.cost+' נקודות Hania'+(ACC.signedIn?'.':', ולכן צריך חשבון Hania360. <a href="'+esc(passBase()+'/?return='+encodeURIComponent(location.origin+'/#flight'))+'">כניסה לחשבון</a>')+'</p>'}
+ if(!mine.length&&AL.list.length<I.max&&I.account!==false){var C=I.cost||50,bal=I.balance;
+  if(!I.signedIn)h+='<p class="note">התראת מחיר עולה '+C+' נקודות Hania. את הנקודות צוברים בחשבון Hania360: בהצטרפות, בביקור יומי ב-Hania Today, בשמירת הטיול בחשבון ועוד.</p><a class="btn pri" href="'+esc(passBase()+'/?return='+encodeURIComponent(location.origin+'/#flight'))+'">כניסה לחשבון Hania360</a>';
+  else if(bal!=null&&bal<C)h+='<div class="sp"><b>יש לכם '+bal+' נקודות</b><span class="note">צריך '+C+'</span></div><div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="'+C+'" aria-valuenow="'+bal+'"><i style="width:'+Math.round(bal/C*100)+'%"></i></div><p class="note">חסרות '+(C-bal)+' נקודות להתראת מחיר. למשל: שמירת הטיול בחשבון נותנת 50 נקודות, וכל ביקור יומי ב-Hania Today נותן 2.</p><a class="btn" href="'+esc(I.earnUrl||'https://today.hania360.com/')+'">איך צוברים נקודות</a>';
+  else{var cheap=alCheapNow(),sug=cheap?Math.max(50,Math.round(cheap*0.9/10)*10):'',tv=S.alTarget||sug;
+   h+='<label for="altg">התראה כשהמחיר לנוסע יורד אל (₪)<input id="altg" type="number" min="50" inputmode="numeric" data-f="alTarget" value="'+esc(tv)+'"></label>'+(cheap?'<p class="note">הזול ביותר שמצאנו כעת: '+nis(cheap)+'.</p>':'')
+    +'<label class="chk" for="alfx"><input id="alfx" type="checkbox" data-f="alFlex"'+(S.alFlex?' checked':'')+'>תאריכים גמישים: כל '+MONTHS[+S.date.slice(5,7)-1]+', אותו מספר לילות</label>'
+    +'<button class="pri" data-act="alsave"'+(AL.busy?' disabled':'')+'>שמירת התראה · '+C+' נקודות Hania</button>'+(bal!=null?'<p class="note">יש לכם '+bal+' נקודות. אחרי השמירה יישארו '+(bal-C)+'.</p>':'')}}
  else if(!mine.length)h+='<p class="note">אפשר לעקוב אחרי עד '+I.max+' טיסות. מחקו התראה כדי להוסיף אחרת.</p>';
  if(S.alMsg)h+='<p class="note" role="status">'+esc(S.alMsg)+'</p>';
  return h+'<p class="note">המחירים מגיעים מנתוני Aviasales שנמצאו ביומיים האחרונים, לא מחיפוש חי. ההתראה נמחקת אחרי תאריך הטיסה.</p></div>'}
@@ -614,7 +616,7 @@ async function alSave(){var d=D(),t=Math.round(+S.alTarget||0);if(!t){var c=alCh
  AL.busy=true;S.alMsg='';render(1);var ep=await alEndpoint();
  try{var j=await api('POST','/api/alerts',{code:d.code,name:d.n,date:S.date,ret:addDays(S.date,nights()),flex:!!S.alFlex,direct:!!S.direct,target:t,endpoint:ep});
   ev('price_alert');S.alTarget='';S.alMsg=(j.paid?'ההתראה נשמרה, ו-'+j.paid+' נקודות מומשו. ':'ההתראה נשמרה. ')+(ep?'נודיע כשהמחיר יגיע ל-'+nis(t)+'.':ACC.signedIn?'ההתראות בטלפון לא אושרו, ולכן העדכון יופיע ב-Hania Today.':'ההתראות בטלפון לא אושרו. אשרו אותן בהגדרות האתר כדי לקבל עדכון.')}
- catch(e){S.alMsg=e&&e.error==='need_account'?'ההתראה הראשונה בחינם. להתראה נוספת צריך להיכנס לחשבון Hania360 ולממש '+(e.cost||50)+' נקודות.':e&&e.error==='not_enough'?'אין מספיק נקודות: צריך '+(e.cost||50)+', ויש לכם '+(e.balance||0)+'. אפשר לצבור עוד ב-Hania Today.':e&&e.error==='exists'?'כבר יש התראה לטיסה הזאת.':e&&e.error==='date'?'התאריך כבר עבר או רחוק מדי.':e&&e.error==='too_many'?'הגעתם למספר ההתראות המרבי.':'שמירת ההתראה נכשלה. נסו שוב.'}
+ catch(e){S.alMsg=e&&e.error==='need_account'?'להתראת מחיר צריך להיכנס לחשבון Hania360 ולממש '+(e.cost||50)+' נקודות.':e&&e.error==='not_enough'?'אין מספיק נקודות: צריך '+(e.cost||50)+', ויש לכם '+(e.balance||0)+'. אפשר לצבור עוד ב-Hania Today.':e&&e.error==='exists'?'כבר יש התראה לטיסה הזאת.':e&&e.error==='date'?'התאריך כבר עבר או רחוק מדי.':e&&e.error==='too_many'?'הגעתם למספר ההתראות המרבי.':'שמירת ההתראה נכשלה. נסו שוב.'}
  AL.busy=false;alLoad(true);render(1)}
 function alDel(id){api('POST','/api/alerts/delete',{id:id}).then(function(){S.alMsg='ההתראה נמחקה.';alLoad(true)}).catch(function(){S.alMsg='המחיקה נכשלה.';render(1)})}
 function flSorted(){var l=FL.list.slice();l.sort(function(a,b){return S.sort==='fast'?(a.dur||9e9)-(b.dur||9e9):S.sort==='early'?mins(a.dep)-mins(b.dep):a.price-b.price});return l}
