@@ -1,3 +1,4 @@
+import { getAccount, linkAccount, unlinkAccount, accountSummary, summaryPreflight } from './account.js';
 import { DESTLIST, destKey } from './destlist.js';
 import { okEndpoint, vapid, wake, subId, ilNow, dueMessage, cleanTrip, placeOn } from './push.js';
 import { destPage, indexPage, sitemap } from './pages.js';
@@ -514,6 +515,8 @@ async function postNotes(req, env) {
   return json(out);
 }
 const ROUTES = {
+  'GET /api/account': getAccount, 'POST /api/account/link': linkAccount, 'POST /api/account/unlink': unlinkAccount,
+  'GET /api/account/summary': accountSummary, 'OPTIONS /api/account/summary': summaryPreflight,
   'GET /api/trip': getTrip, 'PUT /api/trip': putTrip, 'POST /api/share': postShare, 'GET /api/share': getShare, 'GET /api/reports': getReports, 'POST /api/reports': postReport,
   'GET /api/admin/queue': adminQueue, 'POST /api/admin/approve': adminApprove, 'POST /api/click': postClick, 'POST /api/ev': postEvent,
   'GET /api/flights': getFlights, 'GET /api/route': getRoute, 'GET /api/train': getTrain, 'POST /api/dest': postDest, 'GET /api/places': getPlaces, 'GET /api/offers': getOffers, 'GET /api/geo': getGeo, 'GET /api/destlist': getDestList, 'GET /api/resolve': getResolve, 'GET /api/push/key': pushKey, 'POST /api/push/sub': pushSub, 'POST /api/push/unsub': pushUnsub, 'POST /api/push/msg': pushMsg, 'POST /api/push/test': pushTest, 'GET /api/where': getWhere, 'GET /api/weather': getWeather, 'GET /api/fx': getFx, 'POST /api/notes': postNotes,
