@@ -38,6 +38,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          exec > >(tee /tmp/smoke.log) 2>&1
+          trap 'echo "::error title=smoke::$(tail -c 1500 /tmp/smoke.log | tr "\n" "|")"' ERR
           for i in $(seq 1 30); do curl -fsS "$GO_URL/api/health" && break; sleep 5; done; echo
           DEV=$(cat /proc/sys/kernel/random/uuid)
           curl -fsS -X PUT -H "x-device: $DEV" -H 'content-type: application/json' "$GO_URL/api/trip" -d "{\"dest\":\"rome\",\"date\":\"$(date -u -d '+20 days' +%F)\",\"nights\":5,\"fam\":[{\"a\":40},{\"a\":9}]}" > /dev/null
